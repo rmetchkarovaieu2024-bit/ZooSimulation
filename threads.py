@@ -165,6 +165,8 @@ class VisitorThread(threading.Thread):
             v.move(chosen.name)
             chosen.add_visitor()
             v.watch_exhibit(chosen)
+            dwell_secs = v.dwell_time(chosen) * 0.08
+            time.sleep(dwell_secs)
             chosen.remove_visitor()
             visited_this_trip.append(chosen.name)
 
@@ -294,11 +296,6 @@ class SecurityThread(WorkerThread):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class ZooSimulation:
-    """
-    Orchestrates all threads.
-    Call .run() to execute the full simulation.
-    """
-
     def __init__(self, zoo, exhibits, all_animals, all_visitors, all_workers,
                  total_ticks=12, tick_interval=0.04):
         self.zoo          = zoo
@@ -349,9 +346,13 @@ class ZooSimulation:
 
         # Visitor journeys (sequential for clean terminal output)
         section("8. VISITOR JOURNEYS")
-        for t in visitor_threads:
-            t.start()
-            t.join()
+        BATCH_SIZE = 10
+        for batch_start in range(0, len(visitor_threads), BATCH_SIZE):
+            batch = visitor_threads[batch_start: batch_start + BATCH_SIZE]
+            for t in batch:
+                t.start()
+            for t in batch:
+                t.join()
 
         # Let clock finish
         clock.join()

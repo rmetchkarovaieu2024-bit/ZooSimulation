@@ -104,8 +104,7 @@ class AbstractZoneFactory:
     def create_animals(self, exhibit) -> list:
         raise NotImplementedError
 
-    def create_zone(self):
-        """Template method — returns (exhibit, [animals])."""
+    def create_zone(self): # Template method — returns (exhibit, [animals])
         exhibit = self.create_exhibit()
         animals = self.create_animals(exhibit)
         log("ABSTRACT_F",
@@ -115,7 +114,7 @@ class AbstractZoneFactory:
 
 class SavannahFactory(AbstractZoneFactory):
     def create_exhibit(self):
-        return Exhibit("Savannah Enclosure", capacity=150, popularity=9, indoor=False)
+        return Exhibit("Savannah Enclosure", capacity=60, popularity=9, indoor=False)
 
     def create_animals(self, exhibit):
         from animals import AnimalFactory
@@ -129,7 +128,7 @@ class SavannahFactory(AbstractZoneFactory):
 
 class AquaticFactory(AbstractZoneFactory):
     def create_exhibit(self):
-        return Exhibit("Aquarium", capacity=80, popularity=7, indoor=True)
+        return Exhibit("Aquarium", capacity=30, popularity=7, indoor=True)
 
     def create_animals(self, exhibit):
         from animals import AnimalFactory

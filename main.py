@@ -171,13 +171,53 @@ def main():
         w.start_shift()
     zoo.open_zoo()
 
-    # ── Visitors ──────────────────────────────────────────────────────────────
+    # ── Visitors — 80 visitors to stress exhibit capacities ───────────────────
     all_visitors = [
-        RegularVisitor("Lucas", 10), RegularVisitor("Sofia", 35),
-        SeniorVisitor("Javier", 68), StudentVisitor("Mia", 20),
-        KidsVisitor("Elena", 8), RegularVisitor("Marco", 42),
-        SeniorVisitor("Beatriz", 72), StudentVisitor("Daniel", 19),
-        RegularVisitor("Carmen", 31), KidsVisitor("Pablo", 11),
+        # Adults (30)
+        RegularVisitor("Sofia", 35), RegularVisitor("Marco", 42),
+        RegularVisitor("Carmen", 31), RegularVisitor("Andres", 28),
+        RegularVisitor("Isabella", 33), RegularVisitor("Rafael", 45),
+        RegularVisitor("Valentina", 29), RegularVisitor("Santiago", 38),
+        RegularVisitor("Camila", 26), RegularVisitor("Nicolas", 41),
+        RegularVisitor("Lucia", 34), RegularVisitor("Diego", 47),
+        RegularVisitor("Ana", 30), RegularVisitor("Jorge", 52),
+        RegularVisitor("Monica", 39), RegularVisitor("Carlos", 44),
+        RegularVisitor("Patricia", 36), RegularVisitor("Fernando", 49),
+        RegularVisitor("Daniela", 27), RegularVisitor("Alberto", 55),
+        RegularVisitor("Rosa", 31), RegularVisitor("Miguel", 43),
+        RegularVisitor("Claudia", 37), RegularVisitor("Eduardo", 46),
+        RegularVisitor("Natalia", 32), RegularVisitor("Roberto", 50),
+        RegularVisitor("Laura", 28), RegularVisitor("Victor", 53),
+        RegularVisitor("Gabriela", 40), RegularVisitor("Sergio", 35),
+        # Seniors (15)
+        SeniorVisitor("Javier", 68), SeniorVisitor("Beatriz", 72),
+        SeniorVisitor("Manuel", 65), SeniorVisitor("Esperanza", 70),
+        SeniorVisitor("Antonio", 67), SeniorVisitor("Pilar", 74),
+        SeniorVisitor("Francisco", 63), SeniorVisitor("Mercedes", 69),
+        SeniorVisitor("Jose", 71), SeniorVisitor("Dolores", 66),
+        SeniorVisitor("Ramon", 75), SeniorVisitor("Consuelo", 64),
+        SeniorVisitor("Alfredo", 73), SeniorVisitor("Rosario", 62),
+        SeniorVisitor("Enrique", 78),
+        # Students (15)
+        StudentVisitor("Mia", 20), StudentVisitor("Daniel", 19),
+        StudentVisitor("Alejandro", 21), StudentVisitor("Valeria", 18),
+        StudentVisitor("Mateo", 20), StudentVisitor("Sara", 19),
+        StudentVisitor("Sebastian", 22), StudentVisitor("Paula", 18),
+        StudentVisitor("Tomas", 21), StudentVisitor("Andrea", 20),
+        StudentVisitor("Julian", 19), StudentVisitor("Mariana", 22),
+        StudentVisitor("Nicolas", 18), StudentVisitor("Fernanda", 21),
+        StudentVisitor("Samuel", 19),
+        # Children (20)
+        KidsVisitor("Lucas", 10), KidsVisitor("Elena", 8),
+        KidsVisitor("Pablo", 11), KidsVisitor("Sofia", 9),
+        KidsVisitor("Matias", 7), KidsVisitor("Valentina", 10),
+        KidsVisitor("Emilio", 8), KidsVisitor("Isabela", 11),
+        KidsVisitor("Diego", 6), KidsVisitor("Lucia", 9),
+        KidsVisitor("Andres", 10), KidsVisitor("Camila", 7),
+        KidsVisitor("Juan", 8), KidsVisitor("Maria", 11),
+        KidsVisitor("Pedro", 9), KidsVisitor("Ana", 6),
+        KidsVisitor("Carlos", 10), KidsVisitor("Rosa", 8),
+        KidsVisitor("Luis", 7), KidsVisitor("Carla", 11),
     ]
     for v in all_visitors:
         random.choice(zoo.exhibits).add_visitor()

@@ -73,8 +73,8 @@ class SimulationConfig:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance.total_ticks = 14
-            cls._instance.tick_interval = 0.04
+            cls._instance.total_ticks = 30
+            cls._instance.tick_interval = 0.03
             cls._instance.hunger_threshold = 0.60
             cls._instance.clean_threshold = 0.65
             cls._instance.food_prob_senior = 0.45
