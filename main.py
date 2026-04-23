@@ -3,6 +3,10 @@
 #  ZOO OPERATIONS SYSTEM SIMULATION  |  ENTRY POINT
 #  Run: python3 main.py
 #
+#  Simulation runs from 09:00 to 18:00.
+#  Visitors are generated via VisitorFactory (Prototype pattern) —
+#  no manual initialisation needed.  Edit the counts dict to change the mix.
+#
 #  Design patterns are in their natural files, not in a separate patterns.py:
 #    animals.py  — Factory Method, Prototype, Bridge, Visitor Pattern
 #    exhibits.py — Abstract Factory, Composite, Iterator
@@ -14,7 +18,7 @@ import random
 import time
 from datetime import datetime
 
-from utils    import header, section, log, blank, GREEN, RED, BOLD, RESET, CYAN, YELLOW
+from utils    import header, section, log, blank, GREEN, RED, BOLD, RESET, CYAN, YELLOW, rule
 from animals  import (
     AnimalFactory,                              # Pattern 1 — Factory Method
     clone_animal,                               # Pattern 4 — Prototype
@@ -28,7 +32,7 @@ from exhibits import (
     ExhibitGroup,                               # Pattern 6 — Composite
     ExhibitIterator,                            # Pattern 10 — Iterator
 )
-from visitors import RegularVisitor, KidsVisitor, SeniorVisitor, StudentVisitor
+from visitors import VisitorFactory
 from workers  import (
     Cleaner, Feeder, Ticketero, ShopEmployee, Security,
     build_incident_chain, dispatch_incident,    # Pattern 9 — Chain of Responsibility
@@ -38,7 +42,7 @@ from ticket   import Ticket
 from zoo      import (
     SimulationConfig,                           # Pattern 5 — Singleton
     ZooBuilder,                                 # Pattern 3 — Builder
-    ZooFacade,                                  # Pattern 8 — Facade
+    # ZooFacade,                                  # Pattern 8 — Facade
 )
 from threads  import ZooSimulation
 
@@ -46,13 +50,31 @@ from threads  import ZooSimulation
 
 AnimalFactory.register_all()   # Pattern 1: populate the factory registry
 
+ARRIVAL_MINUTES = sorted([
+    # 09:00-10:00  (10 visitors)
+    5, 12, 19, 27, 34, 42, 49, 53, 57, 60,
+    # 10:00-11:30  (20 visitors — morning rush)
+    63, 67, 71, 75, 79, 83, 87, 91, 95, 99,
+    103, 107, 111, 115, 119, 123, 127, 133, 139, 145,
+    # 11:30-13:00  (15 visitors)
+    150, 156, 162, 168, 174, 180, 188, 196, 204, 212,
+    220, 228, 236, 244, 252,
+    # 13:00-14:30  (10 visitors — post-lunch dip)
+    260, 270, 280, 290, 300, 310, 320, 330, 340, 350,
+    # 14:30-16:00  (15 visitors — afternoon peak)
+    358, 366, 374, 382, 390, 398, 406, 414, 420, 426,
+    432, 438, 444, 450, 456,
+    # 16:00-17:30  (10 visitors — wind-down)
+    462, 470, 478, 486, 494, 500, 506, 510, 514, 518,
+])  # exactly 80 values
+
 
 def print_exhibit_status(zoo, label):
     section(label)
     blank()
-    print(f"  {'Exhibit':<22}  {'Type':<8}  {'Visitors':<14}  "
-          f"{'Capacity Bar':<24}  {'Util':>5}  {'Clean Bar':<14}  Clean   Pop  Dwell")
-    print(f"  {'─' * 108}")
+    print(f"  {'Exhibit':<22}  {'Type':<8}  {'Now':>7}  {'Current Bar':<24}  "
+          f"{'Util':>5}  {'Peak':>7}  {'Peak Bar':<24}  {'Peak%':>6}  Clean   Pop")
+    print(f"  {'─' * 130}")
     for ex in zoo.exhibits:
         print(ex.status_line())
 
@@ -80,10 +102,10 @@ def print_animal_status(all_animals, feeder, exhibits):
 
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
-    header("ZOO OPERATIONS SYSTEM SIMULATION  |  TERMINAL MODE")
-    print(f"  Start  : {datetime.now().strftime('%Y-%m-%d  %H:%M:%S')}")
+    header("ZOO OPERATIONS SYSTEM SIMULATION  |  09:00 – 18:00")
+    print(f"  Date   : {datetime.now().strftime('%Y-%m-%d')}")
     print(f"  Engine : Agent-Based + Discrete-Event  |  Language: Python")
-    blank()
+    print(f"  Day    : 09:00 open  ->  18:00 close  |  80 visitors expected")
 
    # SimulationConfig  in zoo.py
     blank()
@@ -145,6 +167,13 @@ def main():
     exs["Savannah Enclosure"].add_animal(baby_lion)
     all_animals.append(baby_lion)
 
+    all_visitors = VisitorFactory.generate({
+        "Adult": 30,
+        "Senior": 15,
+        "Student": 15,
+        "Child": 20,
+    })
+
     # ── Pattern 6: COMPOSITE (exhibits.py) ────────────────────────────────────
     blank()
     indoor_group = ExhibitGroup("All Indoor Exhibits")
@@ -171,7 +200,7 @@ def main():
         w.start_shift()
     zoo.open_zoo()
 
-    # ── Visitors — 80 visitors to stress exhibit capacities ───────────────────
+    """# ── Visitors — 80 visitors to stress exhibit capacities ───────────────────
     all_visitors = [
         # Adults (30)
         RegularVisitor("Sofia", 35), RegularVisitor("Marco", 42),
@@ -221,44 +250,36 @@ def main():
     ]
     for v in all_visitors:
         random.choice(zoo.exhibits).add_visitor()
+"""
+    print_exhibit_status(zoo, "EXHIBIT STATUS  --  09:00  (before visitors)")
 
-    print_exhibit_status(zoo, "EXHIBIT STATUS  --  MORNING")
+ # ExhibitIterator  in exhibits.py
+    blank()
+    ExhibitIterator(zoo.exhibits, order="popularity", reverse=True).print_order()
 
     feeder = next(w for w in workers if w.role == "Feeder")
     security = next(w for w in workers if w.role == "Security")
     section("SCHEDULED EVENT  --  FEEDING SHOW  (Savannah Enclosure)")
     blank()
     log("EVENT", "Feeding show commencing. Visitor surge in progress.", CYAN)
-    for _ in range(8):
-        sav.add_visitor()
     feeder.feed_animals(sav)
     for animal in sav.animals:
         animal.make_sound()
-    if sav.utilization() > 60:
-        security.control_crowd(sav)
 
-    # ── Pattern 10: ITERATOR (exhibits.py) ────────────────────────────────────
-    blank()
-    ExhibitIterator(zoo.exhibits, order="popularity", reverse=True).print_order()
-    blank()
-    log("ITERATOR", "Traversal by utilization (highest first):", CYAN)
-    for ex in ExhibitIterator(zoo.exhibits, order="utilization", reverse=True):
-        log("ITERATOR",
-            f"{ex.name:<26}  util: {ex.utilization()}%  pop: {ex.popularity}/10", CYAN)
 
     # ── Simulation threads ────────────────────────────────────────────────────
     sim = ZooSimulation(
         zoo=zoo,
         exhibits=zoo.exhibits,
         all_animals=all_animals,
-        all_visitors=all_visitors,
+        all_visitors= all_visitors,
         all_workers=workers,
-        total_ticks=cfg.total_ticks,
-        tick_interval=cfg.tick_interval,
+        arrival_minutes=ARRIVAL_MINUTES,
+        real_duration_seconds=cfg.real_duration_seconds,
     )
     sim.run()
 
-    print_exhibit_status(zoo, "EXHIBIT STATUS  --  AFTERNOON")
+    print_exhibit_status(zoo," EXHIBIT STATUS  --  18:00  (end of day)")
     print_animal_status(all_animals, feeder, exs)
 
     # ── Pattern 11: VISITOR PATTERN (animals.py) ──────────────────────────────
@@ -314,10 +335,9 @@ def main():
     zoo.close_zoo()
     zoo.kpi_report()
 
-    header("SIMULATION COMPLETE")
-    print(f"  End: {datetime.now().strftime('%Y-%m-%d  %H:%M:%S')}")
+    header("SIMULATION COMPLETE  —  18:00  ZOO CLOSED")
+    print(f"  Real finish: {datetime.now().strftime('%H:%M:%S')}")
     blank()
-
 
 if __name__ == "__main__":
     main()

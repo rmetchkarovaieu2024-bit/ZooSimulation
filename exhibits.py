@@ -27,6 +27,7 @@ class Exhibit:
         self.animals          = []
         self.current_visitors = 0
         self.cleanliness      = round(random.uniform(0.7, 1.0), 2)
+        self.peak_visitors    = 0
         self._lock            = threading.Lock()
 
     # ── animal management ─────────────────────────────────────────────────────
@@ -43,6 +44,8 @@ class Exhibit:
         with self._lock:
             if self.current_visitors < self.capacity:
                 self.current_visitors += 1
+                if self.current_visitors > self.peak_visitors:
+                    self.peak_visitors = self.current_visitors
                 self.cleanliness = max(0.0, round(self.cleanliness - 0.02, 2))
                 return True
             return False
@@ -86,14 +89,23 @@ class Exhibit:
         f = int(self.cleanliness * 10)
         return "[" + "#" * f + "-" * (10 - f) + "]"
 
+    def peak_utilization(self):
+        return round(self.peak_visitors / self.capacity * 100, 1)
+
+    def peak_bar(self):
+        filled = int(self.peak_visitors / self.capacity * 20)
+        color = RED if self.peak_utilization() > 80 else YELLOW if self.peak_utilization() > 50 else GREEN
+        return f"{color}[{'#' * filled + '-' * (20 - filled)}]{RESET}"
+
     def status_line(self):
         kind = "Indoor " if self.indoor else "Outdoor"
         return (f"  {self.name:<22}  {kind}  "
-                f"Visitors {self.current_visitors:>3}/{self.capacity:<4} "
+                f"Now {self.current_visitors:>3}/{self.capacity:<4} "
                 f"{self.capacity_bar()}  {self.utilization():>5}%  "
+                f"Peak {self.peak_visitors:>3}/{self.capacity:<4} "
+                f"{self.peak_bar()}  {self.peak_utilization():>5}%  "
                 f"Clean {self.clean_bar()} {self.cleanliness:.2f}  "
-                f"Pop {self.popularity}/10  "
-                f"Base dwell ~{self.base_dwell_time()} min")
+                f"Pop {self.popularity}/10")
 
 #─#─ Pattern 2 ───────────────────────────────────────────────────────────────────
 
@@ -114,7 +126,7 @@ class AbstractZoneFactory:
 
 class SavannahFactory(AbstractZoneFactory):
     def create_exhibit(self):
-        return Exhibit("Savannah Enclosure", capacity=60, popularity=9, indoor=False)
+        return Exhibit("Savannah Enclosure", capacity=25, popularity=9, indoor=False)
 
     def create_animals(self, exhibit):
         from animals import AnimalFactory
@@ -128,7 +140,7 @@ class SavannahFactory(AbstractZoneFactory):
 
 class AquaticFactory(AbstractZoneFactory):
     def create_exhibit(self):
-        return Exhibit("Aquarium", capacity=30, popularity=7, indoor=True)
+        return Exhibit("Aquarium", capacity=15, popularity=7, indoor=True)
 
     def create_animals(self, exhibit):
         from animals import AnimalFactory
@@ -142,7 +154,7 @@ class AquaticFactory(AbstractZoneFactory):
 
 class PrimateFactory(AbstractZoneFactory):
     def create_exhibit(self):
-        return Exhibit("Primate Zone", capacity=100, popularity=8, indoor=False)
+        return Exhibit("Primate Zone", capacity=20, popularity=8, indoor=False)
 
     def create_animals(self, exhibit):
         from animals import AnimalFactory

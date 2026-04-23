@@ -41,7 +41,8 @@ class Zoo:
         avg_nrg  = round(sum(v.energy       for v in self.visitors) / max(1, total), 2)
         lost     = sum(1 for v in self.visitors if v.energy < 0.2)
         busiest  = max(self.exhibits, key=lambda e: e.current_visitors) if self.exhibits else None
-        util_avg = round(sum(e.utilization() for e in self.exhibits) / max(1, len(self.exhibits)), 1)
+        util_avg = round(
+            sum(e.peak_utilization() for e in self.exhibits) / max(1, len(self.exhibits)), 1)
 
         # Subtype breakdown
         subtypes = {}
@@ -53,7 +54,7 @@ class Zoo:
             ("Avg Satisfaction Score",        f"{avg_sat:.2f} / 1.00"),
             ("Avg Energy at Exit",            f"{avg_nrg:.2f} / 1.00"),
             ("Lost Visitors (energy < 0.2)",  str(lost)),
-            ("Avg Exhibit Utilization",       f"{util_avg} %"),
+            ("Avg Peak Exhibit Utilization",       f"{util_avg} %"),
             ("Total Revenue (EUR)",           f"{self.revenue:.2f}"),
             ("Busiest Exhibit",               busiest.name if busiest else "N/A"),
         ]
@@ -73,8 +74,7 @@ class SimulationConfig:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance.total_ticks = 30
-            cls._instance.tick_interval = 0.03
+            cls._instance .real_duration_seconds = 15 # 15 second simulate the full 9 hours of a zoo day (9:00-18:00)
             cls._instance.hunger_threshold = 0.60
             cls._instance.clean_threshold = 0.65
             cls._instance.food_prob_senior = 0.45
@@ -85,8 +85,9 @@ class SimulationConfig:
         return cls._instance
 
     def __repr__(self):
-        return (f"SimulationConfig(ticks={self.total_ticks}, "
-                f"tick_interval={self.tick_interval})")
+        return (f"SimulationConfig(real_duration={self.real_duration_seconds}s, "
+                f"hunger_threshold={self.hunger_threshold})")
+
 
 #─#─ Pattern 3 ───────────────────────────────────────────────────────────────────
 class ZooBuilder:

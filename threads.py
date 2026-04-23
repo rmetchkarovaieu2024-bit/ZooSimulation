@@ -19,35 +19,90 @@ import threading
 import time
 import random
 from utils import log, section, blank, rule, WHITE, RED, YELLOW, GREEN, CYAN, BLUE, GREY
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  CLOCK THREAD
 # ─────────────────────────────────────────────────────────────────────────────
 
 class ClockThread(threading.Thread):
     """
-    Global simulation clock.
-    Each tick represents one time unit.
-    tick_interval controls real-world seconds per tick.
+    Maps real elapsed seconds to simulation time 09:00 – 18:00.
+     real_duration_seconds controls how long 9 sim-hours take in real time.
     """
-    def __init__(self, total_ticks=10, tick_interval=0.05):
-        super().__init__(daemon=True)
-        self.tick          = 0
-        self.total_ticks   = total_ticks
-        self.tick_interval = tick_interval
-        self._stop_event   = threading.Event()
+    SIM_START_MIN = 9 * 60  # 09:00 in minutes from midnight
+    SIM_END_MIN = 18 * 60  # 18:00
+    SIM_DURATION = 540  # 9 hours in sim-minutes
 
-    def run(self):
-        while self.tick < self.total_ticks and not self._stop_event.is_set():
-            time.sleep(self.tick_interval)
-            self.tick += 1
+    def __init__(self,real_duration_seconds=60):
+        super().__init__(daemon=True)
+        self.real_duration  = real_duration_seconds
+        self._start_real = None
+        self.tick          = 0
+        #self.total_ticks   = total_ticks
+        #self.tick_interval = tick_interval
+        self._stop_event   = threading.Event()
+        self._running = False
+
+    # ── time properties ───────────────────────────────────────────────────────
+
+    @property
+    def sim_minute(self): #simulation minutes since 09:00 (0 – 540)
+        if self._start_real is None:
+            return 0
+        elapsed = time.time() - self._start_real
+        return min(int(elapsed / self.real_duration * self.SIM_DURATION),
+                   self.SIM_DURATION)
+
+    @property
+    def sim_time_str(self):
+        total = self.SIM_START_MIN + self.sim_minute
+        return f"{total // 60:02d}:{total % 60:02d}"
+
+    def real_second_for(self, arrival_minute):
+        return arrival_minute / self.SIM_DURATION * self.real_duration
+
+     # ── state checks ─────────────────────────────────────────────────────────
+
+    def is_running(self):
+        return self._running and not self._stop_event.is_set()
+
 
     def stop(self):
         self._stop_event.set()
 
     def is_done(self):
-        return self.tick >= self.total_ticks
+        return self._stop_event.is_set() or self.sim_minute >= self.SIM_DURATION
+
+    # ── thread body ───────────────────────────────────────────────────────────
+
+    def run(self):
+        self._start_real = time.time()
+        self._running = True
+
+        announced = set()
+        milestones = {
+            0: "Zoo opens — 09:00",
+            60: "10:00  — Morning rush begins",
+            180: "12:00  — Midday peak",
+            300: "15:00  — Afternoon wave",
+            420: "16:00  — Closing in two hours",
+            510: "17:30  — Last admissions",
+            540: "18:00  — Zoo closes",
+        }
+
+        while not self._stop_event.is_set():
+            time.sleep(0.05)
+            self.tick += 1
+
+            # Announce time milestones
+            sm = self.sim_minute
+            for threshold, label in milestones.items():
+                if sm >= threshold and threshold not in announced:
+                    announced.add(threshold)
+                    log("CLOCK", f"{label}", CYAN)
+
+            if sm >= self.SIM_DURATION:
+                break
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -59,7 +114,7 @@ class ExhibitThread(threading.Thread):
     Manages one exhibit.
     Each tick: cleanliness decays proportional to visitor count.
     """
-    DECAY_PER_VISITOR_PER_TICK = 0.003
+    DECAY_PER_VISITOR_PER_TICK = 0.004
 
     def __init__(self, exhibit, clock):
         super().__init__(daemon=True)
@@ -74,7 +129,7 @@ class ExhibitThread(threading.Thread):
                 decay = self.DECAY_PER_VISITOR_PER_TICK * self.exhibit.current_visitors
                 self.exhibit.cleanliness = max(
                     0.0, round(self.exhibit.cleanliness - decay, 3))
-            time.sleep(0.01)
+            time.sleep(0.02)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -87,7 +142,7 @@ class AnimalThread(threading.Thread):
     Each tick: hunger increases slightly.
     Older animals (lower health) get hungry faster.
     """
-    BASE_HUNGER_RATE = 0.01
+    BASE_HUNGER_RATE = 0.012
 
     def __init__(self, animal, clock):
         super().__init__(daemon=True)
@@ -122,15 +177,35 @@ class VisitorThread(threading.Thread):
 
     The visitor selects a candidate exhibit list, then walks through it.
     """
-    def __init__(self, visitor, exhibits, shop_employee, zoo):
+    def __init__(self, visitor, exhibits, shop_employee, zoo, clock, arrival_minute =0):
         super().__init__(daemon=True)
         self.visitor      = visitor
         self.exhibits     = exhibits
         self.shop_emp     = shop_employee
         self.zoo          = zoo
+        self.clock       = clock
+        self.arrival_minute = arrival_minute  # minutes after 09:00
 
     def run(self):
         v       = self.visitor
+
+        # before onening
+        if self.clock._start_real is not None:
+            target_real = (self.clock._start_real
+                           + self.clock.real_second_for(self.arrival_minute))
+            wait = target_real - time.time()
+            if wait > 0:
+                time.sleep(wait)
+
+        # on time
+        price = 8.0 if v.subtype == "Child" else 5.0 if v.subtype == "Senior" else 12.0
+        self.zoo.revenue += price
+        self.zoo.visitors.append(v)
+        log("ARRIVAL",
+            f"{v.name:<10} ({v.subtype:<7}) arrives.  "
+            f"Ticket: EUR {price:.2f}   Balance: EUR {v.money:.2f}", CYAN)
+
+        # log initial state
         blank()
         rule()
         log("JOURNEY",
@@ -140,13 +215,17 @@ class VisitorThread(threading.Thread):
 
         # Weighted exhibit selection by popularity
         weights  = [e.popularity for e in self.exhibits]
-        n_visits = random.randint(3, 5)
+        # Higher energy -> more exhibits visited.
+        # energy 0.5 -> 2-3 visits, energy 0.75 -> 3-5, energy 1.0 -> 5-7
+        n_visits =  max(2, min(7, int(v.energy * 6) + random.randint(0, 2)))
 
-        visited_this_trip = []
+        #visited_this_trip = []
         for _ in range(n_visits):
             if v.energy <= 0.1:
-                log("VISITOR", f"{v.name:<10}  Energy depleted. Heading to exit.", GREY)
+                log("VISITOR",
+                    f"{v.name:<10}  Energy depleted — heading to exit.", GREY)
                 break
+
 
             # Pick exhibit weighted by popularity
             chosen = random.choices(self.exhibits, weights=weights, k=1)[0]
@@ -165,7 +244,8 @@ class VisitorThread(threading.Thread):
             v.move(chosen.name)
             chosen.add_visitor()
             v.watch_exhibit(chosen)
-            dwell_secs = v.dwell_time(chosen) * 0.08
+
+            dwell_secs = v.dwell_time(chosen) * 0.15 # more realistic
             time.sleep(dwell_secs)
             chosen.remove_visitor()
             visited_this_trip.append(chosen.name)
@@ -209,7 +289,7 @@ class CleanerThread(WorkerThread):
             if self.clock.tick != last_tick and self.clock.tick % 3 == 0:
                 last_tick = self.clock.tick
                 for ex in self.exhibits:
-                    if ex.cleanliness < 0.65:
+                    if ex.cleanliness < 0.60:
                         self.worker.move(ex.name)
                         self.worker.clean_exhibit(ex)
             time.sleep(0.05)
@@ -231,7 +311,7 @@ class FeederThread(WorkerThread):
                 last_tick = self.clock.tick
                 for ex in self.exhibits:
                     for animal in ex.animals:
-                        if animal.hunger_level > 0.6:
+                        if animal.hunger_level > 0.65:
                             self.worker.feed_animals(ex)
                             break
             time.sleep(0.05)
@@ -239,21 +319,13 @@ class FeederThread(WorkerThread):
 
 
 class TicketSellerThread(WorkerThread):
-    def __init__(self, worker, visitors, zoo, clock):
+    def __init__(self, worker, visitor_count, clock):
         super().__init__(worker, clock)
-        self.visitors = visitors
-        self.zoo      = zoo
-
+        self.visitor_count = visitor_count
     def run(self):
-        section("5. VISITOR ARRIVALS")
-        blank()
-        for v in self.visitors:
-            self.worker.validate_ticket(v)
-            price = v.buy_ticket()
-            self.zoo.revenue += price
-            self.zoo.visitors.append(v)
-            time.sleep(0.05)
-
+        log("TICKET",
+            f"{self.worker.name:<12}  Gate open.  "
+            f"Expecting {self.visitor_count} visitors today.", CYAN)
 
 class ShopEmployeeThread(WorkerThread):
     def run(self):
@@ -278,7 +350,7 @@ class SecurityThread(WorkerThread):
     def run(self):
         last_tick = -1
         while not self.clock.is_done():
-            if self.clock.tick != last_tick and self.clock.tick % 4 == 0:
+            if self.clock.tick != last_tick and self.clock.tick % 5 == 0:
                 last_tick = self.clock.tick
                 zone = random.choice(self.ZONES)
                 self.worker.patrol(zone)
@@ -297,14 +369,14 @@ class SecurityThread(WorkerThread):
 
 class ZooSimulation:
     def __init__(self, zoo, exhibits, all_animals, all_visitors, all_workers,
-                 total_ticks=12, tick_interval=0.04):
-        self.zoo          = zoo
-        self.exhibits     = exhibits
-        self.all_animals  = all_animals
-        self.all_visitors = all_visitors
-        self.all_workers  = all_workers
-        self.total_ticks  = total_ticks
-        self.tick_interval= tick_interval
+                 arrival_minutes, real_duration_seconds=60):
+        self.zoo                = zoo
+        self.exhibits           = exhibits
+        self.all_animals        = all_animals
+        self.all_visitors       = all_visitors
+        self.all_workers        = all_workers
+        self.arrival_minutes    = arrival_minutes
+        self.real_duration      = real_duration_seconds
 
         # Unpack workers by role
         self.cleaner  = next(w for w in all_workers if w.role == "Cleaner")
@@ -314,7 +386,9 @@ class ZooSimulation:
         self.security = next(w for w in all_workers if w.role == "Security")
 
     def run(self):
-        clock = ClockThread(self.total_ticks, self.tick_interval)
+        import utils
+        clock = ClockThread(real_duration_seconds=self.real_duration)
+        utils.set_sim_clock(clock)
 
         # Build thread pool
         exhibit_threads  = [ExhibitThread(ex, clock)        for ex in self.exhibits]
@@ -322,20 +396,39 @@ class ZooSimulation:
         worker_threads   = [
             CleanerThread     (self.cleaner,  self.exhibits,                    clock),
             FeederThread      (self.feeder,   self.exhibits,                    clock),
-            TicketSellerThread(self.ticketer, self.all_visitors, self.zoo,      clock),
+            TicketSellerThread(self.ticketer, len(self.all_visitors),           clock),
             ShopEmployeeThread(self.shop_emp,                                   clock),
             SecurityThread    (self.security, self.exhibits,                    clock),
         ]
         visitor_threads  = [
-            VisitorThread(v, self.exhibits, self.shop_emp, self.zoo)
-            for v in self.all_visitors
+            VisitorThread(v, self.exhibits, self.shop_emp, self.zoo , clock, arrival_minute=self.arrival_minutes[i])
+            for i, v in enumerate(self.all_visitors)
         ]
 
         # Start infrastructure threads
         clock.start()
-        for t in exhibit_threads + animal_threads:
+        for t in exhibit_threads + animal_threads + worker_threads:
             t.start()
 
+
+ # Start ALL visitor threads — arrival times spread them across the day
+        section("VISITOR ARRIVALS & JOURNEYS  (09:00 – 18:00)")
+        for t in visitor_threads:
+            t.start()
+
+        # Wait for every visitor to finish their journey
+        for t in visitor_threads:
+            t.join()
+
+        # Stop the clock; let worker/exhibit/animal threads wind down
+        clock.stop()
+        clock.join()
+        for t in worker_threads + exhibit_threads + animal_threads:
+            t.join(timeout=0.5)
+
+        # Clear the global clock reference so post-sim logs show real time
+        utils.set_sim_clock(None)
+"""
         # Ticket selling (sequential, before visitors enter)
         worker_threads[2].start()   # TicketSellerThread
         worker_threads[2].join()
@@ -360,3 +453,4 @@ class ZooSimulation:
         # Finish worker threads
         for t in [worker_threads[0], worker_threads[1], worker_threads[3], worker_threads[4]]:
             t.join(timeout=1)
+"""

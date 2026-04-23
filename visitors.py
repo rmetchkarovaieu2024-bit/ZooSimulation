@@ -22,7 +22,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 import random
-from utils import log, BLUE, CYAN, GREY
+import copy
+from utils import log, BLUE, CYAN, GREEN, GREY
 
 
 class Visitor:
@@ -34,15 +35,16 @@ class Visitor:
         "Senior":  {"move_penalty": 0.08, "dwell_mult": 1.6,  "can_revisit": False},
     }
 
+
     def __init__(self, name, age):
         self.id               = random.randint(10000, 99999)
         self.name             = name
         self.age              = age
         self.subtype          = self._classify()
         self.ticket_type      = "School" if self.subtype == "Student" else "Standard"
-        self.satisfaction     = round(random.uniform(0.6, 0.9), 2)
-        self.energy           = round(random.uniform(0.7, 1.0), 2)
-        self.money            = round(random.uniform(20, 80), 2)
+        self.satisfaction     = round(random.uniform(0.5, 0.9), 2)
+        self.energy           = round(random.uniform(0.5, 1.0), 2)
+        self.money            = round(random.uniform(10, 100), 2)
         self.current_location = "Entrance"
         self.exhibits_visited = []          # tracks visit history (with repeats for kids)
         self._visited_set     = set()       # for deduplication check on non-kids
@@ -59,13 +61,13 @@ class Visitor:
     # ── movement ──────────────────────────────────────────────────────────────
 
     def move(self, destination):
-        penalty = self._profile("move_penalty")
-        self.energy = max(0.0, round(self.energy - penalty, 2))
+       #  penalty = self._profile("move_penalty")
+        self.energy = max(0.0, round(self.energy - self._profile("move_penalty"), 2))
         self.current_location = destination
-        speed_label = {"Child": "fast", "Senior": "slow"}.get(self.subtype, "normal")
+        speed = {"Child": "fast", "Senior": "slow"}.get(self.subtype, "normal")
         log("VISITOR",
             f"{self.name:<10} ({self.subtype:<7})  ->  {destination:<24}  "
-            f"Energy: {self.energy:.2f}  [{speed_label} pace]", BLUE)
+            f"Energy: {self.energy:.2f}  [{speed} pace]", BLUE)
 
     # ── exhibit interaction ───────────────────────────────────────────────────
 
@@ -78,6 +80,7 @@ class Visitor:
         mult = self._profile("dwell_mult")
         return max(1, round(base * mult))
 
+
     def watch_exhibit(self, exhibit):
         dwell = self.dwell_time(exhibit)
         gain  = round(random.uniform(0.02, 0.08), 2)
@@ -85,13 +88,10 @@ class Visitor:
         self.exhibits_visited.append(exhibit.name)
         self._visited_set.add(exhibit.name)
 
-        revisit_note = ""
-        if self.exhibits_visited.count(exhibit.name) > 1:
-            revisit_note = "  [revisit]"
-
+        revisit = "  [revisit]" if self.exhibits_visited.count(exhibit.name) > 1 else ""
         log("VISITOR",
             f"{self.name:<10}  Watching {exhibit.name:<24}  "
-            f"Dwell: {dwell} min   Satisfaction: {self.satisfaction:.2f}{revisit_note}", BLUE)
+            f"Dwell: {dwell} min   Satisfaction: {self.satisfaction:.2f}{revisit}", BLUE)
 
     def has_visited(self, exhibit_name):
         """Children can always re-enter; others cannot."""
@@ -139,3 +139,89 @@ class SeniorVisitor(Visitor):
 
 class StudentVisitor(Visitor):
     pass
+
+# clone
+def clone_visitor(template, name, age):
+    cloned = copy.deepcopy(template)
+    cloned.id = random.randint(10000, 99999)
+    cloned.name = name
+    cloned.age = age
+    cloned.subtype = cloned._classify()
+    cloned.ticket_type = "School" if cloned.subtype == "Student" else "Standard"
+    # Wide ranges so visitors genuinely differ from each other
+    cloned.energy = round(random.uniform(0.50, 1.00), 2)
+    cloned.money = round(random.uniform(10, 100), 2)
+    cloned.satisfaction = round(random.uniform(0.50, 0.90), 2)
+    cloned.current_location = "Entrance"
+    cloned.exhibits_visited = []
+    cloned._visited_set = set()
+    return cloned
+
+_TEMPLATES = { # prototype instances with placeholder name and age (overridden in cloning)
+    "Child": KidsVisitor("__template__", 9),
+    "Student": StudentVisitor("__template__", 20),
+    "Adult": RegularVisitor("__template__", 35),
+    "Senior": SeniorVisitor("__template__", 68),
+}
+
+class VisitorFactory:
+    # Name pools — enough names to avoid duplicates for typical counts
+    NAMES = {
+        "Child": [
+            "Lucas", "Elena", "Pablo", "Sofia", "Matias", "Valentina",
+            "Emilio", "Isabela", "Diego", "Lucia", "Andres", "Camila",
+            "Juan", "Maria", "Pedro", "Ana", "Carlos", "Rosa",
+            "Luis", "Carla", "Miguel", "Carmen", "Felix", "Ines", "Hugo",
+        ],
+        "Student": [
+            "Mia", "Daniel", "Alejandro", "Valeria", "Mateo", "Sara",
+            "Sebastian", "Paula", "Tomas", "Andrea", "Julian", "Mariana",
+            "Nicolas", "Fernanda", "Samuel", "Alba", "Ivan", "Nadia",
+            "Omar", "Irene",
+        ],
+        "Adult": [
+            "Sofia", "Marco", "Carmen", "Andres", "Isabella", "Rafael",
+            "Valentina", "Santiago", "Camila", "Nicolas", "Lucia", "Diego",
+            "Ana", "Jorge", "Monica", "Carlos", "Patricia", "Fernando",
+            "Daniela", "Alberto", "Rosa", "Miguel", "Claudia", "Eduardo",
+            "Natalia", "Roberto", "Laura", "Victor", "Gabriela", "Sergio",
+            "Elena", "Pablo", "Hector", "Silvia", "Ramon", "Teresa",
+        ],
+        "Senior": [
+            "Javier", "Beatriz", "Manuel", "Esperanza", "Antonio", "Pilar",
+            "Francisco", "Mercedes", "Jose", "Dolores", "Ramon", "Consuelo",
+            "Alfredo", "Rosario", "Enrique", "Carmen", "Luis", "Amparo",
+            "Pedro", "Concepcion",
+        ],
+    }
+
+    AGE_RANGES = {
+        "Child": (5, 11),
+        "Student": (17, 22),
+        "Adult": (23, 60),
+        "Senior": (61, 82),
+    }
+
+    @classmethod
+    def generate(cls, counts: dict) -> list:
+        visitors = []
+        for subtype, n in counts.items():
+            template = _TEMPLATES[subtype]
+            name_pool = cls.NAMES[subtype][:]
+            random.shuffle(name_pool)
+            age_min, age_max = cls.AGE_RANGES[subtype]
+
+            for i in range(n):
+                name = name_pool[i % len(name_pool)]
+                if i >= len(name_pool):  # cycle with suffix if needed
+                    name = f"{name}{i // len(name_pool) + 1}"
+                age = random.randint(age_min, age_max)
+                v = clone_visitor(template, name, age)
+                visitors.append(v)
+
+        log("VISITOR_F",
+            f"Generated {len(visitors)} visitors via Prototype cloning  "
+            f"({', '.join(f'{n} {s}' for s, n in counts.items())})", GREEN)
+
+        random.shuffle(visitors)  # mix subtypes across the day
+        return visitors
