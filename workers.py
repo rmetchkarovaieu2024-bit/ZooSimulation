@@ -1,6 +1,11 @@
 # workers.py
 # ─────────────────────────────────────────────────────────────────────────────
 #  WORKER HIERARCHY
+#
+#  Design pattern housed here (workers own this concept):
+#  Pattern 9 — Chain of Responsibility : IncidentHandler chain
+#                SecurityHandler -> VetHandler -> ZooManagerHandler
+#
 #  Base: Worker
 #  Subclasses: Cleaner, Feeder, Ticketero, ShopEmployee, Security
 # ─────────────────────────────────────────────────────────────────────────────
@@ -9,7 +14,7 @@ import random
 from utils import log, GREEN, YELLOW, RED, CYAN, GREY
 
 
-class Worker:
+class Worker: # base
     def __init__(self, name, role, shift_start, shift_end, salary):
         self.id               = random.randint(200, 999)
         self.name             = name
@@ -121,3 +126,88 @@ class Security(Worker):
 
     def handle_incident(self, description):
         log("SECURITY", f"{self.name:<12}  Incident: {description}", RED)
+
+#─#─ Pattern 9 ───────────────────────────────────────────────────────────────────
+
+class IncidentHandler: # base for chain of responsibility
+    def __init__(self, name, role):
+        self.name = name
+        self.role = role
+        self._next = None
+
+    def set_next(self, handler):
+        self._next = handler
+        return handler  # allows chaining: a.set_next(b).set_next(c)
+
+    def handle(self, incident):
+        raise NotImplementedError
+
+    def _escalate(self, incident):
+        if self._next:
+            log("CHAIN",
+                f"{self.name:<16} [{self.role}]  Cannot resolve — escalating.", GREY)
+            self._next.handle(incident)
+        else:
+            log("CHAIN",
+                f"Incident unresolved after full chain: '{incident['type']}'", RED)
+
+
+class SecurityHandler(IncidentHandler): # first in chain — resolves security-related incidents.
+    HANDLES = {"crowd", "trespassing", "lost_child"}
+
+    def __init__(self, name="Marcos"):
+        super().__init__(name, "Security Officer")
+
+    def handle(self, incident):
+        log("CHAIN",
+            f"{self.name:<16} [{self.role}]  Received: '{incident['type']}'", RED)
+        if incident["type"] in self.HANDLES:
+            log("CHAIN",
+                f"{self.name:<16}  RESOLVED: {incident['description']}", GREEN)
+        else:
+            self._escalate(incident)
+
+
+class VetHandler(IncidentHandler): # second in chain — resolves animal health-related incidents.
+    HANDLES = {"sick_animal", "injury", "feeding_emergency"}
+
+    def __init__(self, name="Dr. Lopez"):
+        super().__init__(name, "Zoo Veterinarian")
+
+    def handle(self, incident):
+        log("CHAIN",
+            f"{self.name:<16} [{self.role}]  Received: '{incident['type']}'", YELLOW)
+        if incident["type"] in self.HANDLES:
+            log("CHAIN",
+                f"{self.name:<16}  RESOLVED: {incident['description']}", GREEN)
+        else:
+            self._escalate(incident)
+
+
+class ZooManagerHandler(IncidentHandler): # final in chain — resolves any incident with executive decision.
+
+    def __init__(self, name="Director Garcia"):
+        super().__init__(name, "Zoo Manager")
+
+    def handle(self, incident):
+        log("CHAIN",
+            f"{self.name:<16} [{self.role}]  Received: '{incident['type']}'", CYAN)
+        log("CHAIN",
+            f"{self.name:<16}  RESOLVED (executive decision): "
+            f"{incident['description']}", GREEN)
+
+
+def build_incident_chain(): # helper function to construct the chain of responsibility
+    security = SecurityHandler()
+    vet = VetHandler()
+    manager = ZooManagerHandler()
+    security.set_next(vet).set_next(manager)
+    return security
+
+
+def dispatch_incident(chain_head, incident_type, description): # helper function to create and dispatch an incident through the chain
+    incident = {"type": incident_type, "description": description}
+    log("CHAIN",
+        f"Incident dispatched  type='{incident_type}'  "
+        f"desc='{description}'", RED)
+    chain_head.handle(incident)
