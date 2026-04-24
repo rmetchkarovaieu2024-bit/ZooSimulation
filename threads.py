@@ -219,7 +219,6 @@ class VisitorThread(threading.Thread):
         # energy 0.5 -> 2-3 visits, energy 0.75 -> 3-5, energy 1.0 -> 5-7
         n_visits =  max(2, min(7, int(v.energy * 6) + random.randint(0, 2)))
 
-        #visited_this_trip = []
         for _ in range(n_visits):
             if v.energy <= 0.1:
                 log("VISITOR",
@@ -248,7 +247,7 @@ class VisitorThread(threading.Thread):
             dwell_secs = v.dwell_time(chosen) * 0.15 # more realistic
             time.sleep(dwell_secs)
             chosen.remove_visitor()
-            visited_this_trip.append(chosen.name)
+            #visited_this_trip.append(chosen.name)
 
             # Food stop: Seniors more likely (0.45), others 0.3
             food_prob = 0.45 if v.subtype == "Senior" else 0.30
