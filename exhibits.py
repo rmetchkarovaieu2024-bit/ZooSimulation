@@ -126,7 +126,7 @@ class AbstractZoneFactory:
 
 class SavannahFactory(AbstractZoneFactory):
     def create_exhibit(self):
-        return Exhibit("Savannah Enclosure", capacity=25, popularity=9, indoor=False)
+        return Exhibit("Savannah Enclosure", capacity=25, popularity=random.randint(7, 10), indoor=False)
 
     def create_animals(self, exhibit):
         from animals import AnimalFactory
@@ -140,7 +140,7 @@ class SavannahFactory(AbstractZoneFactory):
 
 class AquaticFactory(AbstractZoneFactory):
     def create_exhibit(self):
-        return Exhibit("Aquarium", capacity=15, popularity=7, indoor=True)
+        return Exhibit("Aquarium", capacity=15, popularity=random.randint(5, 8), indoor=True)
 
     def create_animals(self, exhibit):
         from animals import AnimalFactory
@@ -154,7 +154,7 @@ class AquaticFactory(AbstractZoneFactory):
 
 class PrimateFactory(AbstractZoneFactory):
     def create_exhibit(self):
-        return Exhibit("Primate Zone", capacity=20, popularity=8, indoor=False)
+        return Exhibit("Primate Zone", capacity=20, popularity=random.randint(6, 9), indoor=False)
 
     def create_animals(self, exhibit):
         from animals import AnimalFactory
@@ -162,6 +162,65 @@ class PrimateFactory(AbstractZoneFactory):
             AnimalFactory.create("Monkey", "Chico", 4, exhibit.name),
             AnimalFactory.create("Monkey", "Coco", 14, exhibit.name),
         ]
+
+
+class ElephantFactory(AbstractZoneFactory):
+    def create_exhibit(self):
+        return Exhibit("Elephant Grounds", capacity=30, popularity=random.randint(6, 9), indoor=False)
+
+
+    def create_animals(self, exhibit):
+        from animals import AnimalFactory
+        return [
+            AnimalFactory.create("Elephant", "Dumbo", 30, exhibit.name),
+            AnimalFactory.create("Elephant", "Nandita", 8, exhibit.name),
+        ]
+
+
+class BirdHouseFactory(AbstractZoneFactory):
+    def create_exhibit(self):
+        return Exhibit("Tropical Bird House", capacity=12, popularity=random.randint(5, 8), indoor=True)
+
+    def create_animals(self, exhibit):
+        from animals import AnimalFactory
+        return [
+            AnimalFactory.create("Parrot", "Polly", 3, exhibit.name),
+            AnimalFactory.create("Eagle", "Aquila", 22, exhibit.name),
+            AnimalFactory.create("Penguin", "Pebble", 4, exhibit.name),
+            AnimalFactory.create("Flamingo", "Rosa", 5, exhibit.name),
+            AnimalFactory.create("Owl", "Hoot", 6, exhibit.name),
+        ]
+
+
+class ReptileFactory(AbstractZoneFactory):
+    def create_exhibit(self):
+        return Exhibit("Reptile House", capacity=8, popularity=random.randint(4, 7), indoor=True)
+
+    def create_animals(self, exhibit):
+        from animals import AnimalFactory
+        return [
+            AnimalFactory.create("Snake", "Viper", 4, exhibit.name),
+            AnimalFactory.create("Crocodile", "Crunch", 25, exhibit.name),
+            AnimalFactory.create("Turtle", "Shell", 40, exhibit.name),
+            AnimalFactory.create("Lizard", "Gecko", 2, exhibit.name),
+            AnimalFactory.create("Chameleon", "Kali", 3, exhibit.name),
+        ]
+
+
+class AmphibianFactory(AbstractZoneFactory):
+    def create_exhibit(self):
+        return Exhibit("Amphibian Centre", capacity=7, popularity=random.randint(3, 6), indoor=True)
+
+    def create_animals(self, exhibit):
+        from animals import AnimalFactory
+        return [
+            AnimalFactory.create("Frog", "Ribbit", 2, exhibit.name),
+            AnimalFactory.create("Toad", "Bumpy", 3, exhibit.name),
+            AnimalFactory.create("Salamander", "Sal", 4, exhibit.name),
+            AnimalFactory.create("Newt", "Newton", 2, exhibit.name),
+            AnimalFactory.create("Axolotl", "Axel", 1, exhibit.name),
+        ]
+
 
 #─#─ Pattern 6 ───────────────────────────────────────────────────────────────────
 

@@ -15,6 +15,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 import random
+import math
 import time
 from datetime import datetime
 
@@ -28,7 +29,7 @@ from animals  import (
     )
 from exhibits import (
     SavannahFactory, AquaticFactory,            # Pattern 2 — Abstract Factory
-    PrimateFactory,
+    PrimateFactory, ElephantFactory, BirdHouseFactory, ReptileFactory, AmphibianFactory,
     ExhibitGroup,                               # Pattern 6 — Composite
     ExhibitIterator,                            # Pattern 10 — Iterator
 )
@@ -38,7 +39,7 @@ from workers  import (
     build_incident_chain, dispatch_incident,    # Pattern 9 — Chain of Responsibility
 )
 
-from ticket   import Ticket
+# from ticket   import Ticket
 from zoo      import (
     SimulationConfig,                           # Pattern 5 — Singleton
     ZooBuilder,                                 # Pattern 3 — Builder
@@ -50,23 +51,58 @@ from threads  import ZooSimulation
 
 AnimalFactory.register_all()   # Pattern 1: populate the factory registry
 
-ARRIVAL_MINUTES = sorted([
-    # 09:00-10:00  (10 visitors)
-    5, 12, 19, 27, 34, 42, 49, 53, 57, 60,
-    # 10:00-11:30  (20 visitors — morning rush)
-    63, 67, 71, 75, 79, 83, 87, 91, 95, 99,
-    103, 107, 111, 115, 119, 123, 127, 133, 139, 145,
-    # 11:30-13:00  (15 visitors)
-    150, 156, 162, 168, 174, 180, 188, 196, 204, 212,
-    220, 228, 236, 244, 252,
-    # 13:00-14:30  (10 visitors — post-lunch dip)
-    260, 270, 280, 290, 300, 310, 320, 330, 340, 350,
-    # 14:30-16:00  (15 visitors — afternoon peak)
-    358, 366, 374, 382, 390, 398, 406, 414, 420, 426,
-    432, 438, 444, 450, 456,
-    # 16:00-17:30  (10 visitors — wind-down)
-    462, 470, 478, 486, 494, 500, 506, 510, 514, 518,
-])  # exactly 80 values
+t_thresholds = [
+    (0, 60, 0.10),  # 09:00-10:00  early openers       10 %
+    (60, 150, 0.28),  # 10:00-11:30  morning rush         28 %
+    (150, 240, 0.18),  # 11:30-13:00  late morning         18 %
+    (240, 330, 0.08),  # 13:00-14:30  post-lunch dip        8 %
+    (330, 420, 0.24),  # 14:30-16:00  afternoon peak        24 %
+    (420, 510, 0.12),  # 16:00-17:30  wind-down             12 %
+]
+tiket_booths = 3
+processing_m= 2  # minutes per visitor per booth
+m_gap = processing_m / tiket_booths  # 0.667 min
+
+def generate_arrival_schedule(n_visitors: int) -> list:
+    total_weight = sum(w for _, _, w in t_thresholds)
+    normalised = [(s, e, w / total_weight) for s, e, w in t_thresholds]
+
+    raw = []
+    for _ in range(n_visitors):
+        r = random.random()
+        cumulative = 0.0
+        for start, end, prob in normalised:
+            cumulative += prob
+            if r <= cumulative:
+                raw.append(random.uniform(start, end))
+                break
+        else:
+            raw.append(random.uniform(420, 510))  # fallback: wind-down
+
+    raw.sort()
+    enforced = [raw[0]]
+    for t in raw[1:]:
+        earliest_possible = enforced[-1] + m_gap
+        enforced.append(max(t, earliest_possible))
+
+    # Convert to integer minutes and cap at last-admissions (510 = 17:30)
+    return [min(510, int(t)) for t in enforced]
+
+
+def generate_visitor_counts(n_visitors: int) -> dict:
+    adult_frac = random.uniform(0.40, 0.50)
+    child_frac = random.uniform(0.20, 0.30)
+    senior_frac = random.uniform(0.10, 0.18)
+    # students fill the remainder
+    student_frac = max(0.05, 1.0 - adult_frac - child_frac - senior_frac)
+
+    adults = round(n_visitors * adult_frac)
+    children = round(n_visitors * child_frac)
+    seniors = round(n_visitors * senior_frac)
+    students = n_visitors - adults - children - seniors  # exact remainder
+
+    return {"Adult": adults, "Child": children,
+            "Senior": seniors, "Student": max(1, students)}
 
 
 def print_exhibit_status(zoo, label):
@@ -101,24 +137,26 @@ def print_animal_status(all_animals, feeder, exhibits):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────────
 def main():
+        # ── Daily visitor count — random between 200 and 600 ─────────────────────
+    n_visitors = random.randint(200, 600)
+
     header("ZOO OPERATIONS SYSTEM SIMULATION  |  09:00 – 18:00")
     print(f"  Date   : {datetime.now().strftime('%Y-%m-%d')}")
     print(f"  Engine : Agent-Based + Discrete-Event  |  Language: Python")
-    print(f"  Day    : 09:00 open  ->  18:00 close  |  80 visitors expected")
-
-   # SimulationConfig  in zoo.py
+    print(f"  Day    : 09:00 open  ->  18:00 close  |  {n_visitors} visitors expected  ({tiket_booths} ticket booths)")
+        # SimulationConfig  in zoo.py
     blank()
     cfg = SimulationConfig()
-    cfg2 = SimulationConfig()
-    log("SINGLETON", f"cfg  id={id(cfg)}", CYAN)
-    log("SINGLETON", f"cfg2 id={id(cfg2)}  same instance: {cfg is cfg2}", CYAN)
-    log("SINGLETON", f"Config: {cfg}", CYAN)
+    log("SINGLETON", f"{cfg}  —  same instance every call: {cfg is SimulationConfig()}", CYAN)
 
-    # ── Pattern 1: FACTORY METHOD (animals.py) ────────────────────────────────
+    arrival_mins = generate_arrival_schedule(n_visitors)
+    visitor_counts = generate_visitor_counts(n_visitors)
+
+        # ── Pattern 1: FACTORY METHOD (animals.py) ────────────────────────────────
     blank()
-    log("FACTORY",
-        f"Registered species: {AnimalFactory.available_species()}", GREEN)
+    log("FACTORY",f"Registered species: {AnimalFactory.available_species()}", GREEN)
 
     # ── Patterns 2+3: ABSTRACT FACTORY (exhibits.py) + BUILDER (zoo.py) ──────
     blank()
@@ -127,15 +165,13 @@ def main():
 
     zoo, exs, all_animals, _ = (
         ZooBuilder("Safari World Zoo")
-        .with_zone(SavannahFactory())  # Abstract Factory: exhibit + animals
+        .with_zone(SavannahFactory())
         .with_zone(AquaticFactory())
         .with_zone(PrimateFactory())
-        .with_exhibits([  # Builder: remaining exhibits
-            ("Elephant Grounds", 200, 8, False),
-            ("Tropical Bird House", 60, 7, True),
-            ("Reptile House", 40, 6, True),
-            ("Amphibian Centre", 35, 6, True),
-        ])
+        .with_zone(ElephantFactory())
+        .with_zone(BirdHouseFactory())
+        .with_zone(ReptileFactory())
+        .with_zone(AmphibianFactory())
         .with_animals([  # Factory Method inside Builder
             ("Elephant", "Dumbo", 30, "Elephant Grounds"),
             ("Elephant", "Nandita", 8, "Elephant Grounds"),
@@ -167,12 +203,15 @@ def main():
     exs["Savannah Enclosure"].add_animal(baby_lion)
     all_animals.append(baby_lion)
 
-    all_visitors = VisitorFactory.generate({
-        "Adult": 30,
-        "Senior": 15,
-        "Student": 15,
-        "Child": 20,
-    })
+    all_visitors = VisitorFactory.generate(visitor_counts)
+    log("SCHEDULE",
+        f"Today: {n_visitors} visitors   "
+        f"Adult {visitor_counts['Adult']}  "
+        f"Child {visitor_counts['Child']}  "
+        f"Senior {visitor_counts['Senior']}  "
+        f"Student {visitor_counts['Student']}  "
+        f"|  First arrival: {arrival_mins[0]} min after 09:00  "
+        f"Last: {arrival_mins[-1]} min", CYAN)
 
     # ── Pattern 6: COMPOSITE (exhibits.py) ────────────────────────────────────
     blank()
@@ -199,58 +238,6 @@ def main():
     for w in workers:
         w.start_shift()
     zoo.open_zoo()
-
-    """# ── Visitors — 80 visitors to stress exhibit capacities ───────────────────
-    all_visitors = [
-        # Adults (30)
-        RegularVisitor("Sofia", 35), RegularVisitor("Marco", 42),
-        RegularVisitor("Carmen", 31), RegularVisitor("Andres", 28),
-        RegularVisitor("Isabella", 33), RegularVisitor("Rafael", 45),
-        RegularVisitor("Valentina", 29), RegularVisitor("Santiago", 38),
-        RegularVisitor("Camila", 26), RegularVisitor("Nicolas", 41),
-        RegularVisitor("Lucia", 34), RegularVisitor("Diego", 47),
-        RegularVisitor("Ana", 30), RegularVisitor("Jorge", 52),
-        RegularVisitor("Monica", 39), RegularVisitor("Carlos", 44),
-        RegularVisitor("Patricia", 36), RegularVisitor("Fernando", 49),
-        RegularVisitor("Daniela", 27), RegularVisitor("Alberto", 55),
-        RegularVisitor("Rosa", 31), RegularVisitor("Miguel", 43),
-        RegularVisitor("Claudia", 37), RegularVisitor("Eduardo", 46),
-        RegularVisitor("Natalia", 32), RegularVisitor("Roberto", 50),
-        RegularVisitor("Laura", 28), RegularVisitor("Victor", 53),
-        RegularVisitor("Gabriela", 40), RegularVisitor("Sergio", 35),
-        # Seniors (15)
-        SeniorVisitor("Javier", 68), SeniorVisitor("Beatriz", 72),
-        SeniorVisitor("Manuel", 65), SeniorVisitor("Esperanza", 70),
-        SeniorVisitor("Antonio", 67), SeniorVisitor("Pilar", 74),
-        SeniorVisitor("Francisco", 63), SeniorVisitor("Mercedes", 69),
-        SeniorVisitor("Jose", 71), SeniorVisitor("Dolores", 66),
-        SeniorVisitor("Ramon", 75), SeniorVisitor("Consuelo", 64),
-        SeniorVisitor("Alfredo", 73), SeniorVisitor("Rosario", 62),
-        SeniorVisitor("Enrique", 78),
-        # Students (15)
-        StudentVisitor("Mia", 20), StudentVisitor("Daniel", 19),
-        StudentVisitor("Alejandro", 21), StudentVisitor("Valeria", 18),
-        StudentVisitor("Mateo", 20), StudentVisitor("Sara", 19),
-        StudentVisitor("Sebastian", 22), StudentVisitor("Paula", 18),
-        StudentVisitor("Tomas", 21), StudentVisitor("Andrea", 20),
-        StudentVisitor("Julian", 19), StudentVisitor("Mariana", 22),
-        StudentVisitor("Nicolas", 18), StudentVisitor("Fernanda", 21),
-        StudentVisitor("Samuel", 19),
-        # Children (20)
-        KidsVisitor("Lucas", 10), KidsVisitor("Elena", 8),
-        KidsVisitor("Pablo", 11), KidsVisitor("Sofia", 9),
-        KidsVisitor("Matias", 7), KidsVisitor("Valentina", 10),
-        KidsVisitor("Emilio", 8), KidsVisitor("Isabela", 11),
-        KidsVisitor("Diego", 6), KidsVisitor("Lucia", 9),
-        KidsVisitor("Andres", 10), KidsVisitor("Camila", 7),
-        KidsVisitor("Juan", 8), KidsVisitor("Maria", 11),
-        KidsVisitor("Pedro", 9), KidsVisitor("Ana", 6),
-        KidsVisitor("Carlos", 10), KidsVisitor("Rosa", 8),
-        KidsVisitor("Luis", 7), KidsVisitor("Carla", 11),
-    ]
-    for v in all_visitors:
-        random.choice(zoo.exhibits).add_visitor()
-"""
     print_exhibit_status(zoo, "EXHIBIT STATUS  --  09:00  (before visitors)")
 
  # ExhibitIterator  in exhibits.py
@@ -274,7 +261,7 @@ def main():
         all_animals=all_animals,
         all_visitors= all_visitors,
         all_workers=workers,
-        arrival_minutes=ARRIVAL_MINUTES,
+        arrival_minutes=arrival_mins,
         real_duration_seconds=cfg.real_duration_seconds,
     )
     sim.run()
