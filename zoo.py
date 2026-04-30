@@ -32,7 +32,7 @@ class Zoo:
     def close_zoo(self):
         log("ZOO", f"{self.name}  --  STATUS: CLOSED", RED)
 
-    def kpi_report(self):
+    def kpi_report(self, db=None):
         section("END-OF-DAY KPI REPORT")
         blank()
 
@@ -66,6 +66,18 @@ class Zoo:
         for label, value in rows:
             print(f"  {label:<36}  {value}")
         blank()
+
+        if db:
+            db.save_run({
+                "avg_satisfaction": avg_sat,
+                "avg_energy": avg_nrg,
+                "lost_visitors": lost,
+                "avg_peak_util": util_avg,
+                "total_revenue": round(self.revenue, 2),
+                "busiest_exhibit": busiest.name if busiest else "N/A",
+                **{f"{s.lower()}_count": c for s, c in subtypes.items()},
+            })
+
 
 #─#─ Pattern 5 ───────────────────────────────────────────────────────────────────
 class SimulationConfig:

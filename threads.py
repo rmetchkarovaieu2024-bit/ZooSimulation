@@ -177,7 +177,7 @@ class VisitorThread(threading.Thread):
 
     The visitor selects a candidate exhibit list, then walks through it.
     """
-    def __init__(self, visitor, exhibits, shop_employee, zoo, clock, arrival_minute =0):
+    def __init__(self, visitor, exhibits, shop_employee, zoo, clock, arrival_minute =0, db=None):
         super().__init__(daemon=True)
         self.visitor      = visitor
         self.exhibits     = exhibits
@@ -185,6 +185,8 @@ class VisitorThread(threading.Thread):
         self.zoo          = zoo
         self.clock       = clock
         self.arrival_minute = arrival_minute  # minutes after 09:00
+        self.db = db
+        self.money_start = visitor.money  # capture balance before any spend
 
     def run(self):
         v       = self.visitor
@@ -263,6 +265,9 @@ class VisitorThread(threading.Thread):
                 self.zoo.revenue += random.uniform(5, 25)
 
         v.leave_zoo()
+
+        if self.db:
+            self.db.log_visitor(v,self.arrival_minute,self.money_start)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -368,7 +373,7 @@ class SecurityThread(WorkerThread):
 
 class ZooSimulation:
     def __init__(self, zoo, exhibits, all_animals, all_visitors, all_workers,
-                 arrival_minutes, real_duration_seconds=60):
+                 arrival_minutes, real_duration_seconds= 60, db=None):
         self.zoo                = zoo
         self.exhibits           = exhibits
         self.all_animals        = all_animals
@@ -376,6 +381,8 @@ class ZooSimulation:
         self.all_workers        = all_workers
         self.arrival_minutes    = arrival_minutes
         self.real_duration      = real_duration_seconds
+
+        self.db                 = db
 
         # Unpack workers by role
         self.cleaner  = next(w for w in all_workers if w.role == "Cleaner")
@@ -400,7 +407,7 @@ class ZooSimulation:
             SecurityThread    (self.security, self.exhibits,                    clock),
         ]
         visitor_threads  = [
-            VisitorThread(v, self.exhibits, self.shop_emp, self.zoo , clock, arrival_minute=self.arrival_minutes[i])
+            VisitorThread(v, self.exhibits, self.shop_emp, self.zoo , clock, arrival_minute=self.arrival_minutes[i], db=self.db)
             for i, v in enumerate(self.all_visitors)
         ]
 

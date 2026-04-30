@@ -46,6 +46,7 @@ from zoo      import (
     # ZooFacade,                                  # Pattern 8 — Facade
 )
 from threads  import ZooSimulation
+from database import Database
 
 # START ─────────────────────────────────────────────────────────────────────────────
 
@@ -151,8 +152,13 @@ def main():
     cfg = SimulationConfig()
     log("SINGLETON", f"{cfg}  —  same instance every call: {cfg is SimulationConfig()}", CYAN)
 
+        # ── DATABASE ─────────────────────────────────────────────────────────────
+    db = Database("zoo.db")
+
     arrival_mins = generate_arrival_schedule(n_visitors)
     visitor_counts = generate_visitor_counts(n_visitors)
+
+
 
         # ── Pattern 1: FACTORY METHOD (animals.py) ────────────────────────────────
     blank()
@@ -238,6 +244,7 @@ def main():
     for w in workers:
         w.start_shift()
     zoo.open_zoo()
+    db.start_run(n_visitors)
     print_exhibit_status(zoo, "EXHIBIT STATUS  --  09:00  (before visitors)")
 
  # ExhibitIterator  in exhibits.py
@@ -263,6 +270,7 @@ def main():
         all_workers=workers,
         arrival_minutes=arrival_mins,
         real_duration_seconds=cfg.real_duration_seconds,
+        db = db,
     )
     sim.run()
 
@@ -274,7 +282,7 @@ def main():
     inspector = HealthInspector()
     for animal in all_animals:
         animal.accept(inspector)
-    inspector.print_report()
+    inspector.print_report(db=db,all_animals=all_animals)
 
     blank()
     auditor = HungerAuditor()
@@ -286,13 +294,13 @@ def main():
     blank()
     chain = build_incident_chain()
     dispatch_incident(chain, "crowd",
-                      "Overcrowding at Savannah after feeding show")
+                      "Overcrowding at Savannah after feeding show",db=db)
     blank()
     dispatch_incident(chain, "sick_animal",
-                      "Dumbo (Elephant, age 30) showing signs of fatigue")
+                      "Dumbo (Elephant, age 30) showing signs of fatigue",db=db)
     blank()
     dispatch_incident(chain, "infrastructure",
-                      "Main gate turnstile malfunction — manual override needed")
+                      "Main gate turnstile malfunction — manual override needed",db=db)
 
     # ── Pattern 6 bulk action via Composite ───────────────────────────────────
     blank()
@@ -320,7 +328,10 @@ def main():
     for w in workers:
         w.end_shift()
     zoo.close_zoo()
-    zoo.kpi_report()
+    zoo.kpi_report(db=db)
+
+    db.print_history()
+    db.close()
 
     header("SIMULATION COMPLETE  —  18:00  ZOO CLOSED")
     print(f"  Real finish: {datetime.now().strftime('%H:%M:%S')}")

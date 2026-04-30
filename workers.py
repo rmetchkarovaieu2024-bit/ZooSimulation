@@ -164,7 +164,12 @@ class SecurityHandler(IncidentHandler): # first in chain — resolves security-r
         if incident["type"] in self.HANDLES:
             log("CHAIN",
                 f"{self.name:<16}  RESOLVED: {incident['description']}", GREEN)
+            if incident.get("db"):
+                incident["db"].log_incident(
+                    incident["type"], incident["description"],
+                    self.name, incident.get("steps", 0), incident.get("sim_time", ""))
         else:
+            incident["steps"] = incident.get("steps", 0) + 1
             self._escalate(incident)
 
 
@@ -180,7 +185,13 @@ class VetHandler(IncidentHandler): # second in chain — resolves animal health-
         if incident["type"] in self.HANDLES:
             log("CHAIN",
                 f"{self.name:<16}  RESOLVED: {incident['description']}", GREEN)
+            if incident.get("db"):
+                incident["db"].log_incident(
+                    incident["type"], incident["description"],
+                    self.name, incident.get("steps", 0), incident.get("sim_time", ""))
+
         else:
+            incident["steps"] = incident.get("steps", 0) + 1
             self._escalate(incident)
 
 
@@ -195,6 +206,10 @@ class ZooManagerHandler(IncidentHandler): # final in chain — resolves any inci
         log("CHAIN",
             f"{self.name:<16}  RESOLVED (executive decision): "
             f"{incident['description']}", GREEN)
+        if incident.get("db"):
+            incident["db"].log_incident(
+                incident["type"], incident["description"],
+                self.name, incident.get("steps", 0), incident.get("sim_time", ""))
 
 
 def build_incident_chain(): # helper function to construct the chain of responsibility
@@ -205,8 +220,14 @@ def build_incident_chain(): # helper function to construct the chain of responsi
     return security
 
 
-def dispatch_incident(chain_head, incident_type, description): # helper function to create and dispatch an incident through the chain
-    incident = {"type": incident_type, "description": description}
+def dispatch_incident(chain_head, incident_type, description, db=None,sim_time=""): # helper function to create and dispatch an incident through the chain
+    incident = {
+        "type": incident_type,
+        "description": description,
+        "db": db,
+        "sim_time": sim_time,
+        "steps": 0,
+    }
     log("CHAIN",
         f"Incident dispatched  type='{incident_type}'  "
         f"desc='{description}'", RED)

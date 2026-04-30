@@ -362,7 +362,7 @@ class HealthInspector(AnimalVisitor):
     def visit_fish(self, a):
         self._inspect(a)
 
-    def print_report(self):
+    def print_report(self, db=None, all_animals=None):
         print()
         if self.flagged:
             log("INSPECTOR",
@@ -372,6 +372,10 @@ class HealthInspector(AnimalVisitor):
                       f"health: {a.health:.2f}  [{a.health_status}]")
         else:
             log("INSPECTOR", "Health audit complete.  All animals healthy.", GREEN)
+
+            # Persist health audit snapshot to database
+        if db and all_animals:
+            db.log_health_audit(all_animals, {a.name for a in self.flagged})
 
 
 class HungerAuditor(AnimalVisitor):
