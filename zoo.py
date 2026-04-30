@@ -41,6 +41,8 @@ class Zoo:
         avg_nrg  = round(sum(v.energy       for v in self.visitors) / max(1, total), 2)
         lost     = sum(1 for v in self.visitors if v.energy < 0.2)
         busiest  = max(self.exhibits, key=lambda e: e.current_visitors) if self.exhibits else None
+        animals_died = getattr(self, '_animals_died', 0)
+        animals_born = getattr(self, '_animals_born', 0)
         util_avg = round(
             sum(e.peak_utilization() for e in self.exhibits) / max(1, len(self.exhibits)), 1)
 
@@ -50,6 +52,8 @@ class Zoo:
             subtypes[v.subtype] = subtypes.get(v.subtype, 0) + 1
 
         rows = [
+            ("Animals Died Today", str(animals_died)),
+            ("Animals Born Today", str(animals_born)),
             ("Total Visitors",               str(total)),
             ("Avg Satisfaction Score",        f"{avg_sat:.2f} / 1.00"),
             ("Avg Energy at Exit",            f"{avg_nrg:.2f} / 1.00"),
@@ -75,6 +79,8 @@ class Zoo:
                 "avg_peak_util": util_avg,
                 "total_revenue": round(self.revenue, 2),
                 "busiest_exhibit": busiest.name if busiest else "N/A",
+                "animals_died": animals_died,
+                "animals_born": animals_born,
                 **{f"{s.lower()}_count": c for s, c in subtypes.items()},
             })
 

@@ -365,6 +365,92 @@ class SecurityThread(WorkerThread):
         # End-of-day incident check
         if random.random() < 0.65:
             self.worker.handle_incident(random.choice(self.INCIDENTS))
+# ─────────────────────────────────────────────────────────────────────────────
+#  LIFECYCLE THREAD  —  end-of-day death confirmation + procreation
+# ─────────────────────────────────────────────────────────────────────────────
+
+class LifecycleThread(threading.Thread):
+    PROCREATION_CHANCE = 0.15
+
+    OFFSPRING_NAMES = {
+        "Lion":       ["Kion", "Kiara", "Nuka", "Vitani", "Taka"],
+        "Elephant":   ["Ellie", "Tembo", "Jumbo", "Elba", "Trunky"],
+        "Tiger":      ["Tigra", "Rajah", "Bangel", "Kira", "Shere"],
+        "Monkey":     ["Bongo", "Momo", "Zazu", "Pip", "Koko"],
+        "Zebra":      ["Zara", "Zed", "Ziggy", "Zola", "Stripe"],
+        "Parrot":     ["Rio", "Coco", "Kiko", "Pico", "Lora"],
+        "Eagle":      ["Talon", "Aria", "Hawk", "Storm", "Swoop"],
+        "Penguin":    ["Waddle", "Frost", "Floe", "Slick", "Blizzard"],
+        "Flamingo":   ["Blush", "Coral", "Pinky", "Rosie", "Flo"],
+        "Owl":        ["Luna", "Shadow", "Sage", "Wren", "Hoot Jr"],
+        "Shark":      ["Finn", "Chomp", "Reef", "Surge", "Jag"],
+        "Frog":       ["Hoppy", "Leap", "Dart", "Puddle", "Splash"],
+        "Toad":       ["Wart", "Bog", "Murk", "Toadie", "Bumble"],
+        "Salamander": ["Slim", "Blaze", "Ember", "Ash", "Newbie"],
+        "Axolotl":    ["Gilly", "Axie", "Ripple", "Wade", "Bubbles"],
+        "Crocodile":  ["Snap", "Gnash", "Chomper", "Lurk", "Swamp"],
+        "Snake":      ["Slither", "Coil", "Hiss Jr", "Venom", "Fang Jr"],
+        "Turtle":     ["Shelly", "Mossy", "Pebble", "Dune", "Sandy"],
+        "Lizard":     ["Dart", "Scale", "Spike", "Skitter", "Dash"],
+        "Chameleon":  ["Chromie", "Pixel", "Hue", "Shade", "Tint"],
+        "Clownfish":  ["Nemo Jr", "Bubbles", "Coral Jr", "Stripe Jr", "Finn Jr"],
+        "Goldfish":   ["Flake", "Bubble", "Glitter", "Sunny", "Spark"],
+        "Stingray":   ["Glide", "Skate", "Drifter", "Ray Jr", "Ripple Jr"],
+        "Seahorse":   ["Tide", "Current", "Drift", "Brine", "Coral Jr"],
+    }
+
+    def __init__(self, exhibits, all_animals, db=None):
+        super().__init__(daemon=True)
+        self.exhibits    = exhibits
+        self.all_animals = all_animals
+        self.db          = db
+        self.new_animals = []
+
+    def run(self):
+        from animals import clone_animal
+        import random as _rand
+
+        log("LIFECYCLE", "End-of-day lifecycle check...", YELLOW)
+
+        for exhibit in self.exhibits:
+            living  = [a for a in exhibit.animals if a.is_alive]
+            checked = set()
+
+            for i, a in enumerate(living):
+                for b in living[i+1:]:
+                    pair = tuple(sorted([a.name, b.name]))
+                    if pair in checked:
+                        continue
+                    checked.add(pair)
+                    if not a.can_procreate_with(b):
+                        continue
+                    if _rand.random() > self.PROCREATION_CHANCE:
+                        continue
+
+                    pool      = self.OFFSPRING_NAMES.get(a.species, ["Junior"])
+                    taken     = {x.name for x in self.all_animals}
+                    available = [n for n in pool if n not in taken]
+                    name      = available[0] if available else f"{a.species}_cub"
+
+                    offspring = clone_animal(a, new_name=name, new_age=0)
+                    offspring.hunger_level = 0.1
+                    exhibit.add_animal(offspring)
+                    self.all_animals.append(offspring)
+                    self.new_animals.append(offspring)
+
+                    log("LIFECYCLE",
+                        f"BIRTH  {a.species} '{name}'  "
+                        f"parents: {a.name} x {b.name}  "
+                        f"exhibit: {exhibit.name}", GREEN)
+
+                    if self.db:
+                        self.db.record_birth(offspring, mother=a, father=b)
+
+        died  = sum(1 for a in self.all_animals if not a.is_alive)
+        born  = len(self.new_animals)
+        color = RED if died > 0 else YELLOW
+        log("LIFECYCLE", f"Complete — Born: {born}  Died: {died}", color)
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -398,7 +484,7 @@ class ZooSimulation:
 
         # Build thread pool
         exhibit_threads  = [ExhibitThread(ex, clock)        for ex in self.exhibits]
-        animal_threads   = [AnimalThread(a, clock)           for a in self.all_animals]
+        animal_threads   = [AnimalThread(a, clock, db=self.db)           for a in self.all_animals]
         worker_threads   = [
             CleanerThread     (self.cleaner,  self.exhibits,                    clock),
             FeederThread      (self.feeder,   self.exhibits,                    clock),
@@ -425,6 +511,13 @@ class ZooSimulation:
         # Wait for every visitor to finish their journey
         for t in visitor_threads:
             t.join()
+
+            # End-of-day lifecycle: procreation + confirm deaths
+        lifecycle = LifecycleThread(self.exhibits, self.all_animals, db=self.db)
+        lifecycle.start()
+        lifecycle.join()
+        self.zoo._animals_died = sum(1 for a in self.all_animals if not a.is_alive)
+        self.zoo._animals_born = len(lifecycle.new_animals)
 
         # Stop the clock; let worker/exhibit/animal threads wind down
         clock.stop()

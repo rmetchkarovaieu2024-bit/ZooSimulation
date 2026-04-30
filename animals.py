@@ -34,13 +34,38 @@ class Animal: # the base
         # Health degrades with age — older animals are less healthy
         self.health        = round(max(0.1, 1.0 - age * 0.025), 2)
         self.health_status = self._compute_health_status()
+        self.is_alive       = True
+        self._db_id         = None    # set by Database.register_animals()
+        self._hunger_ticks_high = 0
 
+    def update_hunger_tick(self):
+        if self.hunger_level > 0.85:
+            self._hunger_ticks_high += 1
+        else:
+            self._hunger_ticks_high = 0
+
+        if self._hunger_ticks_high >= 5 and self.is_alive:
+            self.is_alive = False
+            log("ANIMAL",
+                f"{self.name:<14} ({self.species:<12})  "
+                f"*** DIED — hunger critical for too long ***", "[31m")
+            return True  # caller should call db.record_death()
+        return False
+
+    def can_procreate_with(self, other) -> bool:
+        return (self is not other
+                and self.species == other.species
+                and self.is_alive and other.is_alive
+                and self.health_status == "Healthy"
+                and other.health_status == "Healthy")
+
+    '''
     def _compute_health_status(self):
         if self.health >= 0.8:  return "Healthy"
         if self.health >= 0.5:  return "Aging"
         if self.health >= 0.3:  return "Frail"
         return "Critical"
-
+    '''
     def eat(self):
         self.hunger_level = max(0.0, round(self.hunger_level - 0.3, 2))
         log("ANIMAL", f"{self.name:<14} ({self.species:<12})  Fed.   "
