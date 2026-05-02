@@ -140,7 +140,9 @@ def print_animal_status(all_animals, feeder, exhibits):
 # ─────────────────────────────────────────────────────────────────────────────
     # ─────────────────────────────────────────────────────────────────────────────
 def main():
-        # ── Daily visitor count — random between 200 and 600 ─────────────────────
+    n_visitors = random.randint(200, 600)
+
+    # ── Daily visitor count — random between 200 and 600 ─────────────────────
     header("ZOO OPERATIONS SYSTEM SIMULATION  |  09:00 – 18:00")
     print(f"  Date   : {datetime.now().strftime('%Y-%m-%d')}")
     print(f"  Engine : Agent-Based + Discrete-Event  |  Language: Python")
@@ -152,7 +154,7 @@ def main():
 
         # ── DATABASE ─────────────────────────────────────────────────────────────
     db = Database("zoo.db")
-    n_visitors = random.randint(200, 600)
+    #n_visitors = random.randint(200, 600)
     arrival_mins = generate_arrival_schedule(n_visitors)
     visitor_counts = generate_visitor_counts(n_visitors)
 
@@ -278,7 +280,7 @@ def main():
     print_exhibit_status(zoo," EXHIBIT STATUS  --  18:00  (end of day)")
     print_animal_status(all_animals, feeder, exs)
 
-    db.save_animal_state(all_animals,feeder,exs)  # persist any health/hunger changes for next run
+    #db.save_animal_state(all_animals,feeder,exs)  # persist any health/hunger changes for next run
     db.save_animal_state(all_animals, {a.name for a in all_animals if not a.is_alive})
 
 

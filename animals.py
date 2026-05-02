@@ -59,13 +59,13 @@ class Animal: # the base
                 and self.health_status == "Healthy"
                 and other.health_status == "Healthy")
 
-    '''
+
     def _compute_health_status(self):
         if self.health >= 0.8:  return "Healthy"
         if self.health >= 0.5:  return "Aging"
         if self.health >= 0.3:  return "Frail"
         return "Critical"
-    '''
+
     def eat(self):
         self.hunger_level = max(0.0, round(self.hunger_level - 0.3, 2))
         log("ANIMAL", f"{self.name:<14} ({self.species:<12})  Fed.   "
@@ -295,6 +295,9 @@ class AnimalFactory:
 def clone_animal(animal, new_name, new_age=None):
     cloned = copy.deepcopy(animal)
     cloned.id = random.randint(1000, 9999)
+    cloned._db_id = None
+    cloned._hunger_ticks_high = 0
+    cloned.is_alive = True
     cloned.name = new_name
     if new_age is not None:
         cloned.age = new_age

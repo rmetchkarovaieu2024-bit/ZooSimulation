@@ -13,6 +13,7 @@
 
 import sqlite3
 import os
+import threading
 from datetime import datetime
 from utils import log, GREEN, CYAN, GREY, RED, YELLOW
 
@@ -25,6 +26,7 @@ class Database:
         self.path = path or self.DB_FILE
         self.conn = sqlite3.connect(self.path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
+        self._lock = threading.Lock()
         self._create_tables()
         self.current_run_id = None
         log("DATABASE",
@@ -320,18 +322,18 @@ class Database:
     def log_visitor(self, visitor, arrival_minute: int, money_start: float):
         if not self.current_run_id:
             return
-        self.conn.execute("""
-            INSERT INTO visitor_log
-                (run_id, name, subtype, age, arrival_minute,
-                 unique_exhibits, total_visits, satisfaction, energy_at_exit, money_spent)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (self.current_run_id, visitor.name, visitor.subtype, visitor.age,
-              arrival_minute, len(visitor._visited_set),
-              len(visitor.exhibits_visited),
-              round(visitor.satisfaction, 3), round(visitor.energy, 3),
-              round(money_start - visitor.money, 2)))
-        self.conn.commit()
-
+        with self._lock:
+            self.conn.execute("""
+                              INSERT INTO visitor_log
+                              (run_id, name, subtype, age, arrival_minute,
+                               unique_exhibits, total_visits, satisfaction, energy_at_exit, money_spent)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                              """, (self.current_run_id, visitor.name, visitor.subtype, visitor.age,
+                                    arrival_minute, len(visitor._visited_set),
+                                    len(visitor.exhibits_visited),
+                                    round(visitor.satisfaction, 3), round(visitor.energy, 3),
+                                    round(money_start - visitor.money, 2)))
+            self.conn.commit()
     # ── health audit ──────────────────────────────────────────────────────────
 
     def log_health_audit(self, animals: list, flagged_names: set):

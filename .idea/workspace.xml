@@ -4,11 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c1903157-d869-4d59-8972-5b9ce75dd3b0" name="Changes" comment="30/04/26 - add database">
+    <list default="true" id="c1903157-d869-4d59-8972-5b9ce75dd3b0" name="Changes" comment="30/04/26 - add database for animals">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/animals.py" beforeDir="false" afterPath="$PROJECT_DIR$/animals.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/threads.py" beforeDir="false" afterPath="$PROJECT_DIR$/threads.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zoo.py" beforeDir="false" afterPath="$PROJECT_DIR$/zoo.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/zoo.db" beforeDir="false" afterPath="$PROJECT_DIR$/zoo.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/zoo.db-journal" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -91,7 +94,8 @@
       <workItem from="1777453451636" duration="1613000" />
       <workItem from="1777456353251" duration="89000" />
       <workItem from="1777457230613" duration="1898000" />
-      <workItem from="1777537508960" duration="4329000" />
+      <workItem from="1777537508960" duration="4513000" />
+      <workItem from="1777727290811" duration="4174000" />
     </task>
     <task id="LOCAL-00001" summary="start">
       <option name="closed" value="true" />
@@ -181,7 +185,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777540486702</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="30/04/26 - add database for animals">
+      <option name="closed" value="true" />
+      <created>1777541863326</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1777541863326</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -210,10 +222,11 @@
     <MESSAGE value="26/04/26 - over all good" />
     <MESSAGE value="29/04/26 - delete tickets" />
     <MESSAGE value="30/04/26 - add database" />
-    <option name="LAST_COMMIT_MESSAGE" value="30/04/26 - add database" />
+    <MESSAGE value="30/04/26 - add database for animals" />
+    <option name="LAST_COMMIT_MESSAGE" value="30/04/26 - add database for animals" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/ZooOSPC$main.coverage" NAME="main Coverage Results" MODIFIED="1777541721491" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/ZooOSPC$main.coverage" NAME="main Coverage Results" MODIFIED="1777731429417" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ZooOSPC$zoo.coverage" NAME="zoo Coverage Results" MODIFIED="1776945989523" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ZooOSPC$animals.coverage" NAME="animals Coverage Results" MODIFIED="1774437821340" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ZooOSPC$exhibits.coverage" NAME="exhibits Coverage Results" MODIFIED="1777027226242" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

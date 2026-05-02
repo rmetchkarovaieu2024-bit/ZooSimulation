@@ -35,12 +35,10 @@ class ClockThread(threading.Thread):
     def __init__(self,real_duration_seconds=60):
         super().__init__(daemon=True)
         self.real_duration  = real_duration_seconds
-        self._start_real = None
-        self.tick          = 0
-        #self.total_ticks   = total_ticks
-        #self.tick_interval = tick_interval
-        self._stop_event   = threading.Event()
-        self._running = False
+        self._start_real    = None
+        self.tick           = 0
+        self._stop_event    = threading.Event()
+        self._running       = False
 
     # ── time properties ───────────────────────────────────────────────────────
 
@@ -144,10 +142,11 @@ class AnimalThread(threading.Thread):
     """
     BASE_HUNGER_RATE = 0.012
 
-    def __init__(self, animal, clock):
+    def __init__(self, animal, clock, db=None):
         super().__init__(daemon=True)
         self.animal = animal
         self.clock  = clock
+        self.db     = db
 
     def run(self):
         last_tick = -1
@@ -158,6 +157,9 @@ class AnimalThread(threading.Thread):
                 rate = self.BASE_HUNGER_RATE * (2.0 - self.animal.health)
                 self.animal.hunger_level = min(
                     1.0, round(self.animal.hunger_level + rate, 3))
+                died = self.animal.update_hunger_tick()
+                if died and self.db:
+                    self.db.record_death(self.animal, cause="starvation")
             time.sleep(0.01)
 
 
@@ -177,6 +179,8 @@ class VisitorThread(threading.Thread):
 
     The visitor selects a candidate exhibit list, then walks through it.
     """
+    _semaphore = None   # set by ZooSimulation before threads start
+
     def __init__(self, visitor, exhibits, shop_employee, zoo, clock, arrival_minute =0, db=None):
         super().__init__(daemon=True)
         self.visitor      = visitor
@@ -189,7 +193,7 @@ class VisitorThread(threading.Thread):
         self.money_start = visitor.money  # capture balance before any spend
 
     def run(self):
-        v       = self.visitor
+        v = self.visitor
 
         # before onening
         if self.clock._start_real is not None:
@@ -198,7 +202,16 @@ class VisitorThread(threading.Thread):
             wait = target_real - time.time()
             if wait > 0:
                 time.sleep(wait)
+        sem = VisitorThread._semaphore
+        if sem:
+            sem.acquire()
+        try:
+            self._do_journey(v)
+        finally:
+            if sem:
+                sem.release()
 
+    def _do_journey(self, v):
         # on time
         price = 8.0 if v.subtype == "Child" else 5.0 if v.subtype == "Senior" else 12.0
         self.zoo.revenue += price
@@ -502,8 +515,10 @@ class ZooSimulation:
         for t in exhibit_threads + animal_threads + worker_threads:
             t.start()
 
+        MAX_CONCURRENT_VISITORS = 50
+        VisitorThread._semaphore = threading.Semaphore(MAX_CONCURRENT_VISITORS)
 
- # Start ALL visitor threads — arrival times spread them across the day
+        # Start ALL visitor threads — arrival times spread them across the day
         section("VISITOR ARRIVALS & JOURNEYS  (09:00 – 18:00)")
         for t in visitor_threads:
             t.start()
@@ -527,29 +542,3 @@ class ZooSimulation:
 
         # Clear the global clock reference so post-sim logs show real time
         utils.set_sim_clock(None)
-"""
-        # Ticket selling (sequential, before visitors enter)
-        worker_threads[2].start()   # TicketSellerThread
-        worker_threads[2].join()
-
-        # Start remaining worker threads
-        for t in [worker_threads[0], worker_threads[1], worker_threads[3], worker_threads[4]]:
-            t.start()
-
-        # Visitor journeys (sequential for clean terminal output)
-        section("8. VISITOR JOURNEYS")
-        BATCH_SIZE = 10
-        for batch_start in range(0, len(visitor_threads), BATCH_SIZE):
-            batch = visitor_threads[batch_start: batch_start + BATCH_SIZE]
-            for t in batch:
-                t.start()
-            for t in batch:
-                t.join()
-
-        # Let clock finish
-        clock.join()
-
-        # Finish worker threads
-        for t in [worker_threads[0], worker_threads[1], worker_threads[3], worker_threads[4]]:
-            t.join(timeout=1)
-"""
