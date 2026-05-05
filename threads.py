@@ -162,15 +162,25 @@ class AnimalThread(threading.Thread):
                     self.db.record_death(self.animal, cause="starvation")
 
                 # Age death — old/critical animals have a small chance each tick
+                # Age death — old/critical animals have a small chance each tick
                 if self.animal.is_alive and self.animal.health < 0.18:
-                    if random.random() < 0.002:
+                    critical_ticks = getattr(self.animal, "_critical_ticks", 0) + 1
+                    self.animal._critical_ticks = critical_ticks
+
+                    # Death chance increases the longer the animal stays critical
+                    severity = (0.18 - self.animal.health) / 0.18  # 0.0 → 1.0
+                    death_prob = 0.0002 + severity * 0.0008  # 0.0002 → 0.0010
+
+                    if critical_ticks > 50 and random.random() < death_prob:
                         self.animal.is_alive = False
                         if self.db:
                             self.db.record_death(self.animal, cause="old age")
+                else:
+                    self.animal._critical_ticks = 0
 
                 # Fight/accident death — very rare for any animal
                 if self.animal.is_alive:
-                    if random.random() < 0.0000005: # 0.000005
+                    if random.random() < 0.000001: # 0.000005
                         self.animal.is_alive = False
                         if self.db:
                             self.db.record_death(self.animal, cause="accident")

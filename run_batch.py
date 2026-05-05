@@ -1,7 +1,7 @@
 import subprocess
 import sys
 
-RUNS = 5
+RUNS = 30
 
 
 for i in range(1, RUNS + 1):
