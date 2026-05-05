@@ -20,6 +20,7 @@ MAGENTA = "\033[35m"
 
 W = 72
 
+SILENT = False  # set to True to and it doesnt print anything (for testing purposes)
 # ── Simulation clock reference ─────────────────────────────────────────────
 _sim_clock = None #  Set by ZooSimulation before threads start.  None = show real time.
 
@@ -43,21 +44,29 @@ def header(title):
 
 
 def section(title):
+    if SILENT:
+        return
     print()
     print(f"{CYAN}{BOLD}  {title}{RESET}")
     print(f"{CYAN}  {'─' * (W - 2)}{RESET}")
 
 
 def log(tag, msg, color=RESET):
+    if SILENT:
+        return
     t = _time_label()
     print(f"  {GREY}[{t}]{RESET}  {color}{BOLD}[{tag:<12}]{RESET}  {msg}")
 
 
 def rule():
+    if SILENT:
+        return
     print(f"  {GREY}{'·' * (W - 2)}{RESET}")
 
 
 def blank():
+    if SILENT:
+        return
     print()
 
 

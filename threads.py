@@ -160,6 +160,20 @@ class AnimalThread(threading.Thread):
                 died = self.animal.update_hunger_tick()
                 if died and self.db:
                     self.db.record_death(self.animal, cause="starvation")
+
+                # Age death — old/critical animals have a small chance each tick
+                if self.animal.is_alive and self.animal.health < 0.18:
+                    if random.random() < 0.002:
+                        self.animal.is_alive = False
+                        if self.db:
+                            self.db.record_death(self.animal, cause="old age")
+
+                # Fight/accident death — very rare for any animal
+                if self.animal.is_alive:
+                    if random.random() < 0.0000005: # 0.000005
+                        self.animal.is_alive = False
+                        if self.db:
+                            self.db.record_death(self.animal, cause="accident")
             time.sleep(0.01)
 
 
@@ -328,7 +342,7 @@ class FeederThread(WorkerThread):
                 last_tick = self.clock.tick
                 for ex in self.exhibits:
                     for animal in ex.animals:
-                        if animal.hunger_level > 0.70:
+                        if animal.hunger_level > 0.78:
                             self.worker.feed_animals(ex)
                             break
             time.sleep(0.05)
@@ -415,7 +429,8 @@ class SecurityThread(WorkerThread):
             time.sleep(0.05)
         # End-of-day incident check
         if random.random() < 0.65:
-            self.worker.handle_incident(random.choice(self.INCIDENTS))
+            _all = [i for v in self.INCIDENTS_BY_TYPE.values() for i in v]
+            self.worker.handle_incident(random.choice(_all))
 # ─────────────────────────────────────────────────────────────────────────────
 #  LIFECYCLE THREAD  —  end-of-day death confirmation + procreation
 # ─────────────────────────────────────────────────────────────────────────────
@@ -485,15 +500,12 @@ class LifecycleThread(threading.Thread):
 
                     offspring = clone_animal(a, new_name=name, new_age=0)
                     offspring.hunger_level = 0.1
+                    offspring.health = 1.0
+                    offspring.health_status = offspring._compute_health_status()
+
                     exhibit.add_animal(offspring)
                     self.all_animals.append(offspring)
                     self.new_animals.append(offspring)
-
-                    log("LIFECYCLE",
-                        f"BIRTH  {a.species} '{name}'  "
-                        f"parents: {a.name} x {b.name}  "
-                        f"exhibit: {exhibit.name}", GREEN)
-
                     if self.db:
                         self.db.record_birth(offspring, mother=a, father=b)
 

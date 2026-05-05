@@ -39,12 +39,12 @@ class Animal: # the base
         self._hunger_ticks_high = 0
 
     def update_hunger_tick(self):
-        if self.hunger_level > 0.80:
+        if self.hunger_level > 0.85:
             self._hunger_ticks_high += 1
         else:
             self._hunger_ticks_high = 0
 
-        if self._hunger_ticks_high >= 5 and self.is_alive:
+        if self._hunger_ticks_high >= 8 and self.is_alive:
             self.is_alive = False
             log("ANIMAL",
                 f"{self.name:<14} ({self.species:<12})  "
