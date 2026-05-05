@@ -328,7 +328,7 @@ class FeederThread(WorkerThread):
                 last_tick = self.clock.tick
                 for ex in self.exhibits:
                     for animal in ex.animals:
-                        if animal.hunger_level > 0.65:
+                        if animal.hunger_level > 0.70:
                             self.worker.feed_animals(ex)
                             break
             time.sleep(0.05)
@@ -353,12 +353,50 @@ class ShopEmployeeThread(WorkerThread):
 
 class SecurityThread(WorkerThread):
     ZONES = ["North Zone", "East Zone", "South Zone", "West Zone", "Central Plaza"]
-    INCIDENTS = [
-        "Unattended baggage near Reptile House entrance",
-        "Visitor attempting to feed restricted animals",
-        "Crowd disturbance near Aquarium exit",
-        "Lost child reported near Primate Zone",
-    ]
+    INCIDENTS_BY_TYPE = {
+        "crowd": [
+            "Visitor attempting to conduct a full yoga class inside the Elephant Grounds",
+            "Man in crocodile costume refused entry — real crocodiles visibly offended",
+            "Visitor reported 'talking to the fish' for 45 minutes — fish appear engaged",
+            "Group of seniors playing cards in the Reptile House — say it is 'nice and warm'",
+            "Child stuck head through Primate Zone fence — monkeys are grooming it",
+            "Influencer setting up ring light inside Aquarium — disrupting fish circadian rhythms",
+            "Visitor brought own goldfish 'to make friends' — refused entry to Aquarium",
+            "Tourist feeding crocodile a sandwich — described the experience as 'thrilling'",
+            "Lost child found in Amphibian Centre — had named all the frogs and started a club",
+            "Visitor tried to ride Dumbo — cited 'the movie' as legal precedent",
+            "Person doing a full photoshoot with Flamingos — flamingos appear to be posing",
+            "Food court seagull has stolen 11 hotdogs — appears to have a system",
+            "Queue fight over last 'Zoo Map' in gift shop — two seniors, still ongoing",
+            "Visitor claims ice cream 'was looked at aggressively' by an eagle — demands refund",
+            "Man eating lunch inside Reptile House 'for ambience' — staff unsure how to proceed",
+        ],
+        "sick_animal": [
+            "Flamingo escaped enclosure — currently doing laps around the gift shop",
+            "Axolotl found in visitor's handbag — owner claims it 'followed her in'",
+            "Parrot learned to say 'FIRE' and is screaming it repeatedly near the Aquarium",
+            "Tortoise Shell escaped — spotted moving at 0.02 km/h toward the car park",
+            "Monkey Coco stole 7 phones and is holding them hostage in the Primate Zone",
+            "Chameleon Kali missing — exhibit appears empty but 'something keeps breathing'",
+            "Penguin Pebble found in staff bathroom, seemingly on purpose",
+            "Snake Viper loose in gift shop — no injuries, but gift shop sales have stopped",
+            "Crocodile Crunch appears to be smiling — vet unsure if this is a good sign",
+            "Owl Hoot refuses to open eyes — may be asleep, may be plotting something",
+            "Seahorse Poseidon has changed colour to match the gift shop wallpaper",
+        ],
+        "infrastructure": [
+            "Feeder Carlos accidentally fed visitors' packed lunches to the monkeys",
+            "Cleaner Maria's mop handle got into Reptile House — lizard has claimed it",
+            "Ticket machine printing in Latin — IT unable to explain why",
+            "PA system playing hold music — no one knows how it started or how to stop it",
+            "Zoo map redesign uploaded upside down — 47 visitors currently lost",
+            "Security camera in Amphibian Centre has been watching same frog sit still for 3 hours",
+            "Main gate turnstile jammed — Marcos is pretending he knows how to fix it",
+            "Gift shop till displaying prices in Zimbabwean dollars — Pedro unaware",
+            "Staff WhatsApp group accidentally added a parrot — it keeps replying",
+            "Exhibit lighting in Reptile House set to 'disco mode' — reptiles unbothered",
+        ],
+    }
 
     def __init__(self, worker, exhibits, clock):
         super().__init__(worker, clock)

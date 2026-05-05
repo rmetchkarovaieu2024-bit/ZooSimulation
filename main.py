@@ -47,6 +47,7 @@ from zoo      import (
 )
 from threads  import ZooSimulation
 from database import Database
+from threads import SecurityThread as _ST
 
 # START ─────────────────────────────────────────────────────────────────────────────
 
@@ -166,11 +167,11 @@ def main():
 
     # ── Patterns 2+3: ABSTRACT FACTORY (exhibits.py) + BUILDER (zoo.py) ──────
     blank()
-    workers = [Cleaner("Maria"), Feeder("Carlos"), Ticketero("Ana"),
-               ShopEmployee("Pedro"), Security("Marcos")]
+    workers = [Cleaner("Carol"), Feeder("Sacha"), Ticketero("Jade"),
+               ShopEmployee("Thea"), Security("Avisa")]
 
     zoo, exs, all_animals, _ = (
-        ZooBuilder("Safari World Zoo")
+        ZooBuilder("Caleido Zoo")
         .with_zone(SavannahFactory())
         .with_zone(AquaticFactory())
         .with_zone(PrimateFactory())
@@ -179,24 +180,24 @@ def main():
         .with_zone(ReptileFactory())
         .with_zone(AmphibianFactory())
         .with_animals([  # Factory Method inside Builder
-            ("Elephant", "Dumbo", 30, "Elephant Grounds"),
-            ("Elephant", "Nandita", 8, "Elephant Grounds"),
-            ("Parrot", "Polly", 3, "Tropical Bird House"),
-            ("Eagle", "Aquila", 22, "Tropical Bird House"),
-            ("Penguin", "Pebble", 4, "Tropical Bird House"),
-            ("Flamingo", "Rosa", 5, "Tropical Bird House"),
-            ("Owl", "Hoot", 6, "Tropical Bird House"),
-            ("Snake", "Viper", 4, "Reptile House"),
-            ("Crocodile", "Crunch", 25, "Reptile House"),
-            ("Turtle", "Shell", 40, "Reptile House"),
-            ("Lizard", "Gecko", 2, "Reptile House"),
-            ("Chameleon", "Kali", 3, "Reptile House"),
-            ("Frog", "Ribbit", 2, "Amphibian Centre"),
-            ("Toad", "Bumpy", 3, "Amphibian Centre"),
-            ("Salamander", "Sal", 4, "Amphibian Centre"),
-            ("Newt", "Newton", 2, "Amphibian Centre"),
-            ("Axolotl", "Axel", 1, "Amphibian Centre"),
-            ("Goldfish", "Goldie", 1, "Aquarium"),
+            ("Elephant", "Memo", 30, "Elephant Grounds"),
+            ("Elephant", "KJ", 8, "Elephant Grounds"),
+            ("Parrot", "Milan", 3, "Tropical Bird House"),
+            ("Eagle", "Karim", 22, "Tropical Bird House"),
+            ("Penguin", "Faris A", 4, "Tropical Bird House"),
+            ("Flamingo", "Haya", 5, "Tropical Bird House"),
+            ("Owl", "Isabella", 6, "Tropical Bird House"),
+            ("Snake", "Alex", 4, "Reptile House"),
+            ("Crocodile", "Cesar", 25, "Reptile House"),
+            ("Turtle", "Noor", 40, "Reptile House"),
+            ("Lizard", "Seif", 2, "Reptile House"),
+            ("Chameleon", "Louis", 3, "Reptile House"),
+            ("Frog", "Tina", 2, "Amphibian Centre"),
+            ("Toad", "Rishi", 3, "Amphibian Centre"),
+            ("Salamander", "Sacha", 4, "Amphibian Centre"),
+            ("Newt", "Santi", 2, "Amphibian Centre"),
+            ("Axolotl", "Massimo", 1, "Amphibian Centre"),
+            ("Goldfish", "Maya", 1, "Aquarium"),
         ])
         .with_workers(workers)
         .build()
@@ -299,16 +300,12 @@ def main():
 
     # ── Pattern 9: CHAIN OF RESPONSIBILITY (workers.py) ───────────────────────
     blank()
+    _inc = _ST.INCIDENTS_BY_TYPE
     chain = build_incident_chain()
-    dispatch_incident(chain, "crowd",
-                      "Overcrowding at Savannah after feeding show",db=db)
-    blank()
-    dispatch_incident(chain, "sick_animal",
-                      "Dumbo (Elephant, age 30) showing signs of fatigue",db=db)
-    blank()
-    dispatch_incident(chain, "infrastructure",
-                      "Main gate turnstile malfunction — manual override needed",db=db)
-
+    _types = random.choices(list(_inc.keys()), k=random.randint(1, 5))
+    for _t in _types:
+        dispatch_incident(chain, _t, random.choice(_inc[_t]), db=db)
+        blank()
     # ── Pattern 6 bulk action via Composite ───────────────────────────────────
     blank()
     indoor_group.clean()

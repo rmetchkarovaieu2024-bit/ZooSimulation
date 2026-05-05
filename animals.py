@@ -39,7 +39,7 @@ class Animal: # the base
         self._hunger_ticks_high = 0
 
     def update_hunger_tick(self):
-        if self.hunger_level > 0.85:
+        if self.hunger_level > 0.80:
             self._hunger_ticks_high += 1
         else:
             self._hunger_ticks_high = 0
