@@ -162,7 +162,7 @@ class AnimalThread(threading.Thread):
                     self.db.record_death(self.animal, cause="starvation")
 
                 # Age death — old/critical animals have a small chance each tick
-                # Age death — old/critical animals have a small chance each tick
+                
                 if self.animal.is_alive and self.animal.health < 0.18:
                     critical_ticks = getattr(self.animal, "_critical_ticks", 0) + 1
                     self.animal._critical_ticks = critical_ticks
