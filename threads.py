@@ -180,7 +180,7 @@ class AnimalThread(threading.Thread):
 
                 # Fight/accident death — very rare for any animal
                 if self.animal.is_alive:
-                    if random.random() < 0.000001: # 0.000005
+                    if random.random() < 0.000001: # before it was 0.000005
                         self.animal.is_alive = False
                         if self.db:
                             self.db.record_death(self.animal, cause="accident")
